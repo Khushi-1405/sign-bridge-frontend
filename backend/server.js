@@ -22,19 +22,14 @@ const allowedOrigins = [
   "https://sign-bridge-frontend-six.vercel.app", // Add your deployed URL here later
 ];
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // Allow requests with no origin (like mobile apps or curl requests)
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.indexOf(origin) === -1) {
-        return callback(new Error("CORS policy blocked this origin"), false);
-      }
-      return callback(null, true);
-    },
-    credentials: true,
-  }),
-);
+app.use(cors({
+  origin: [
+    "https://sign-bridge-frontend-git-main-khushi-dubeys-projects-f032c6aa.vercel.app",
+    "https://sign-bridge-frontend-six.vercel.app" // Add your shorter production link too
+  ],
+  methods: ["GET", "POST", "PUT", "DELETE"],
+  credentials: true
+}));
 app.use(express.json()); // ✅ Critical for reading JSON body in Register/Login
 
 // ✅ Connect new Auth Routes
@@ -52,10 +47,12 @@ const users = {}; // userId -> socketId mapping
 
 const server = http.createServer(app);
 
-const io = new Server(server, {
+const io = require("socket.io")(server, {
   cors: {
-    origin: "*",
-  },
+    origin: "https://sign-bridge-frontend-git-main-khushi-dubeys-projects-f032c6aa.vercel.app",
+    methods: ["GET", "POST"],
+    credentials: true
+  }
 });
 
 io.on("connection", (socket) => {
