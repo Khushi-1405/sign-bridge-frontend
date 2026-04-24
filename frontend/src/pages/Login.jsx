@@ -31,86 +31,86 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-white font-sans p-6">
-      <div className="w-full max-w-[420px] flex flex-col items-center">
+    <div className="min-h-screen w-full flex flex-col items-center justify-start bg-white font-sans overflow-x-hidden">
+      
+      {/* 1. RADAR SECTION (Responsive Container) */}
+      <div className="relative w-full max-w-[500px] aspect-square flex items-center justify-center mt-10 md:mt-16 scale-90 md:scale-100">
         
-        {/* TOP SECTION: CIRCULAR RADAR DESIGN */}
-        <div className="relative w-full aspect-square flex items-center justify-center mb-8">
-          {/* Concentric Circles */}
-          <div className="absolute w-[100%] h-[100%] border border-gray-100 rounded-full"></div>
-          <div className="absolute w-[75%] h-[75%] border border-gray-100 rounded-full"></div>
-          <div className="absolute w-[50%] h-[50%] bg-pink-50 rounded-full animate-pulse"></div>
-          
-          {/* Avatar Points (Simulating "People around you") */}
-          <div className="absolute top-10 left-20 w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden">
-            <img src="https://i.pravatar.cc/150?u=1" alt="user" />
-          </div>
-          <div className="absolute bottom-20 left-4 w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden">
-            <img src="https://i.pravatar.cc/150?u=2" alt="user" />
-          </div>
-          <div className="absolute top-1/2 right-4 w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden">
-            <img src="https://i.pravatar.cc/150?u=3" alt="user" />
-          </div>
-          
-          {/* Center Avatar */}
-          <div className="relative w-20 h-20 rounded-full border-4 border-white shadow-2xl overflow-hidden z-10">
-            <img src="https://i.pravatar.cc/150?u=me" alt="me" />
-          </div>
-          
-          {/* Floating Icons */}
-          <div className="absolute bottom-10 right-20 bg-pink-500 p-2 rounded-full shadow-lg">
-             <div className="w-3 h-3 bg-white rounded-full"></div>
-          </div>
+        {/* Concentric Circles */}
+        <div className="absolute w-[90%] h-[90%] border border-gray-100 rounded-full"></div>
+        <div className="absolute w-[65%] h-[65%] border border-gray-100 rounded-full"></div>
+        <div className="absolute w-[40%] h-[40%] bg-pink-50/50 rounded-full animate-pulse"></div>
+        
+        {/* Floating Avatars - Fixed Positions using % to stay responsive */}
+        <div className="absolute top-[10%] left-[25%] w-14 h-14 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
+          <img src="https://i.pravatar.cc/150?u=a" className="w-full h-full object-cover" alt="user" />
+        </div>
+        <div className="absolute top-[45%] left-[5%] w-12 h-12 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
+          <img src="https://i.pravatar.cc/150?u=b" className="w-full h-full object-cover" alt="user" />
+        </div>
+        <div className="absolute bottom-[20%] left-[20%] w-10 h-10 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
+          <img src="https://i.pravatar.cc/150?u=c" className="w-full h-full object-cover" alt="user" />
+        </div>
+        <div className="absolute top-[30%] right-[10%] w-14 h-14 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
+          <img src="https://i.pravatar.cc/150?u=d" className="w-full h-full object-cover" alt="user" />
+        </div>
+        <div className="absolute bottom-[15%] right-[25%] w-12 h-12 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
+          <img src="https://i.pravatar.cc/150?u=e" className="w-full h-full object-cover" alt="user" />
         </div>
 
-        {/* TEXT SECTION */}
-        <div className="text-center mb-10">
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-3 leading-tight">
-            Let's meeting new<br/>people around you
-          </h1>
+        {/* Center Main Avatar */}
+        <div className="relative w-24 h-24 rounded-full border-[6px] border-white shadow-2xl overflow-hidden z-30">
+          <img src="https://i.pravatar.cc/150?u=main" className="w-full h-full object-cover" alt="main-user" />
         </div>
 
-        {/* FORM SECTION */}
-        <form onSubmit={handleLogin} className="w-full space-y-4">
-          {/* Hidden inputs but kept for state logic, or replace with the sleek buttons in image */}
+        {/* Small Pink Accent Dot */}
+        <div className="absolute bottom-[35%] left-[30%] bg-pink-500 w-4 h-4 rounded-full border-2 border-white shadow-lg"></div>
+      </div>
+
+      {/* 2. CONTENT SECTION */}
+      <div className="w-full max-w-[400px] px-8 pb-12 text-center">
+        <h1 className="text-3xl md:text-4xl font-black text-gray-900 mb-4 leading-[1.1] tracking-tight">
+          Let's meeting new<br/>people around you
+        </h1>
+        
+        <form onSubmit={handleLogin} className="space-y-4 mt-8">
           <div className="space-y-3">
-             <input 
-                type="email" 
-                placeholder="Email Address" 
-                className="w-full bg-gray-50 border-none p-4 rounded-3xl text-gray-700 outline-none focus:ring-2 focus:ring-purple-200 transition-all"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)} 
-                required 
-              />
-              <input 
-                type="password" 
-                placeholder="Password" 
-                className="w-full bg-gray-50 border-none p-4 rounded-3xl text-gray-700 outline-none focus:ring-2 focus:ring-purple-200 transition-all"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)} 
-                required 
-              />
+            <input 
+              type="email" 
+              placeholder="Email Address" 
+              className="w-full bg-gray-50 border border-gray-100 p-4 rounded-3xl text-gray-800 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-400"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)} 
+              required 
+            />
+            <input 
+              type="password" 
+              placeholder="Password" 
+              className="w-full bg-gray-50 border border-gray-100 p-4 rounded-3xl text-gray-800 outline-none focus:ring-2 focus:ring-purple-100 transition-all placeholder:text-gray-400"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)} 
+              required 
+            />
           </div>
 
           <button 
             type="submit"
-            className="w-full flex items-center justify-center gap-3 bg-[#421d4a] text-white font-bold py-4 rounded-[32px] hover:bg-[#2d1432] transition-all shadow-lg"
+            className="w-full flex items-center justify-center gap-3 bg-[#3d1a45] text-white font-bold py-4 rounded-[35px] hover:bg-[#2a1230] transition-all shadow-lg active:scale-[0.98]"
           >
-            <span className="bg-white/20 p-1 rounded-full">📞</span>
+            <span className="text-xl">📱</span>
             Login with Account
           </button>
 
           <button 
             type="button"
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-100 text-gray-700 font-bold py-4 rounded-[32px] hover:bg-gray-50 transition-all shadow-sm"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-gray-700 font-bold py-4 rounded-[35px] hover:bg-gray-50 transition-all shadow-sm active:scale-[0.98]"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" alt="G" className="w-5 h-5"/>
             Login with Google
           </button>
         </form>
 
-        {/* FOOTER */}
-        <p className="text-gray-400 text-sm mt-8">
+        <p className="text-gray-400 text-sm mt-10">
           Don't have an account? <span className="text-pink-500 cursor-pointer font-bold hover:underline" onClick={() => navigate("/register")}>Sign Up</span>
         </p>
       </div>
