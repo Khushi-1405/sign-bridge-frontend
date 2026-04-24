@@ -8,20 +8,24 @@ const Call = () => {
   const navigate = useNavigate();
   
   const [incomingSign, setIncomingSign] = useState("");
-  const [history, setHistory] = useState([]); // 🔥 To show conversation flow
+  const [history, setHistory] = useState([]); 
   const [callConnected, setCallConnected] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
+  const [aiStatus, setAiStatus] = useState("OFFLINE"); // ✅ NEW: Track AI State
 
   useEffect(() => {
     // 🎧 Listen for signs from the remote user
     socket.on("receive-sign", (data) => {
-      if (data && data !== "No Sign") {
+      if (data && data !== "No Sign" && data !== "No Hand Detected") {
         setIncomingSign(data);
         
-        // Add to history list (limited to last 5 for UI cleanliness)
-        setHistory((prev) => [data, ...prev].slice(0, 5));
+        // Add to history list
+        setHistory((prev) => {
+          if (prev[0] === data) return prev; // Avoid duplicate history entries
+          return [data, ...prev].slice(0, 5);
+        });
 
-        // Clear current bubble after 4 seconds
+        // Clear bubble after 4 seconds
         setTimeout(() => setIncomingSign(""), 4000);
       }
     });
@@ -49,7 +53,6 @@ const Call = () => {
 
   return (
     <div style={styles.page}>
-      {/* 🚀 Header: Modern and Professional */}
       <header style={styles.header}>
         <div style={styles.brand}>
           <div style={styles.logoCircle}>🤟</div>
@@ -64,13 +67,25 @@ const Call = () => {
       <main style={styles.main}>
         <div style={styles.contentLayout}>
           
-          {/* 📹 LEFT: The Video Interaction (Your ML Canvas is inside here) */}
+          {/* 📹 LEFT: Video Section */}
           <div style={styles.videoSection}>
-             <VideoCall roomId={roomId} />
+             {/* ✅ Added setAiStatus to VideoCall so it can report back */}
+             <VideoCall roomId={roomId} onAiStatusChange={(status) => setAiStatus(status)} />
           </div>
 
-          {/* 🗨️ RIGHT: The Translation Intelligence Sidebar */}
+          {/* 🗨️ RIGHT: Sidebar */}
           <div style={styles.sidebar}>
+            
+            {/* ✅ NEW: AI STATUS CARD */}
+            <div style={{...styles.card, borderLeft: `4px solid ${aiStatus === "ONLINE" ? "#22c55e" : "#ef4444"}`}}>
+              <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+                <h4 style={styles.cardTitle}>AI ENGINE</h4>
+                <span style={{fontSize: '10px', fontWeight: 'bold', color: aiStatus === "ONLINE" ? "#22c55e" : "#ef4444"}}>
+                  {aiStatus}
+                </span>
+              </div>
+            </div>
+
             <div style={styles.card}>
               <h4 style={styles.cardTitle}>Live Translation</h4>
               <div style={styles.activeSubtitle}>
@@ -86,14 +101,17 @@ const Call = () => {
               <h4 style={styles.cardTitle}>Conversation History</h4>
               <div style={styles.historyList}>
                 {history.length > 0 ? history.map((h, i) => (
-                  <div key={i} style={{...styles.historyItem, opacity: 1 - (i * 0.2)}}>
+                  <div key={i} style={{...styles.historyItem, opacity: 1 - (i * 0.15)}}>
                     {h}
                   </div>
                 )) : <p style={styles.emptyText}>No signs detected yet.</p>}
               </div>
             </div>
 
-            <button style={styles.endBtn} onClick={() => navigate("/")}>
+            <button style={styles.endBtn} onClick={() => {
+              socket.emit("leave-room", roomId);
+              navigate("/");
+            }}>
               End Session 📞
             </button>
           </div>
@@ -116,8 +134,8 @@ const styles = {
   contentLayout: { display: "grid", gridTemplateColumns: "1fr 350px", gap: "30px" },
   videoSection: { background: "#111827", padding: "20px", borderRadius: "24px", border: "1px solid #1e293b", boxShadow: "0 10px 30px rgba(0,0,0,0.5)" },
   sidebar: { display: "flex", flexDirection: "column", gap: "20px" },
-  card: { background: "#161b2c", padding: "20px", borderRadius: "20px", border: "1px solid #1e293b" },
-  cardTitle: { margin: "0 0 15px 0", fontSize: "14px", color: "#6366f1", textTransform: "uppercase", letterSpacing: "1px" },
+  card: { background: "#161b2c", padding: "20px", borderRadius: "20px", border: "1px solid #1e293b", transition: '0.3s' },
+  cardTitle: { margin: "0 0 10px 0", fontSize: "14px", color: "#6366f1", textTransform: "uppercase", letterSpacing: "1px" },
   activeSubtitle: { minHeight: "80px", background: "#0b0f1a", borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "28px", fontWeight: "bold", border: "1px solid #334155" },
   glowText: { color: "#fff", textShadow: "0 0 10px rgba(99, 102, 241, 0.8)" },
   historyList: { display: "flex", flexDirection: "column", gap: "10px" },
