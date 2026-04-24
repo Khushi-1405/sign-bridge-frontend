@@ -3,9 +3,9 @@ import cv2
 import numpy as np
 import logging
 import os
-from fastapi import FastAPI, HTTPException, Request, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
+from fastapi.staticfiles import StaticFiles  # 🔥 Added to serve GIFs
 
 # ✅ Import your multi-output prediction function
 try:
@@ -22,15 +22,25 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SignBridgeAPI")
 
-# ✅ FIX 1: Explicit CORS for Vercel
-# Replace "*" with your actual Vercel URL to avoid browser security blocks
+# ✅ FIX 1: Corrected CORS (Must include https://)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["sign-bridge-frontend-six.vercel.app"], 
+    allow_origins=[
+        "https://sign-bridge-frontend-six.vercel.app", 
+        "http://localhost:5173" # Allow local development too
+    ], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ✅ FIX 2: Serve the 'signs' folder as Static Assets
+# This allows the frontend to fetch GIFs via URL
+if os.path.exists("signs"):
+    app.mount("/signs", StaticFiles(directory="signs"), name="signs")
+    logger.info("📂 Signs folder mounted successfully")
+else:
+    logger.warning("⚠️ 'signs' folder not found! Speech-to-Sign GIFs will not load.")
 
 @app.get("/")
 async def home():
@@ -40,18 +50,27 @@ async def home():
 async def health():
     return {"status": "OK", "model_ready": True}
 
+# ✅ FIX 3: Helper endpoint for Frontend to know what GIFs exist
+@app.get("/list-signs")
+async def list_signs():
+    if not os.path.exists("signs"):
+        return {"available_signs": []}
+    files = os.listdir("signs")
+    signs = [f.split(".")[0].lower() for f in files if f.endswith(".gif")]
+    return {"available_signs": signs}
+
 # 🧠 Prediction API
 @app.post("/predict")
 async def predict(request: Request):
     try:
-        # ✅ FIX 2: Optimized parsing for large Base64 strings
+        # Optimized parsing for large Base64 strings
         data = await request.json()
         image_data = data.get("image")
         
         if not image_data:
             raise HTTPException(status_code=400, detail="No image data found")
 
-        # ✅ FIX 3: Robust Base64 Handling
+        # Robust Base64 Handling
         try:
             if "," in image_data:
                 encoded = image_data.split(",", 1)[1]
@@ -72,13 +91,11 @@ async def predict(request: Request):
 
         # ML Prediction 
         try:
-            # ✅ Ensure your predict_sign function is efficient
             sign_name, confidence, landmarks = predict_sign(frame)
         except Exception as te:
             logger.error(f"ML Error: {te}")
             return {"sign": "Processing Error", "confidence": 0, "landmarks": []}
 
-        # Response Payload
         return {
             "sign": sign_name,
             "confidence": round(float(confidence), 2),
@@ -93,8 +110,6 @@ async def predict(request: Request):
 if __name__ == "__main__":
     import uvicorn
     port = int(os.environ.get("PORT", 8000))
-    # host="0.0.0.0" is mandatory for cloud deployment
-    # limit_concurrency helps prevent the free tier from crashing
     uvicorn.run(
         app, 
         host="0.0.0.0", 

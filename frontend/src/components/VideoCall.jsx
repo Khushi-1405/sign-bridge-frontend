@@ -16,7 +16,7 @@ const VideoCall = ({ roomId }) => {
   const [isAiConnected, setIsAiConnected] = useState(false);
   const [localCaption, setLocalCaption] = useState("");
   const [remoteCaption, setRemoteCaption] = useState("");
-  const [remoteGif, setRemoteGif] = useState(null); // 🔥 For Speech-to-Sign GIF
+  const [remoteGif, setRemoteGif] = useState(null); 
 
   // 1. Initialize Camera & WebRTC
   useEffect(() => {
@@ -59,6 +59,7 @@ const VideoCall = ({ roomId }) => {
   // 2. Socket Listeners
   useEffect(() => {
     socket.on("offer", async (offer) => {
+      if (!peerConnection.current) return;
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
       const answer = await peerConnection.current.createAnswer();
       await peerConnection.current.setLocalDescription(answer);
@@ -66,21 +67,24 @@ const VideoCall = ({ roomId }) => {
     });
 
     socket.on("answer", async (answer) => {
+      if (!peerConnection.current) return;
       await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
     });
 
     socket.on("ice-candidate", async (candidate) => {
       try {
-        await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+        if (peerConnection.current) {
+          await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+        }
       } catch (e) { console.error("ICE Error:", e); }
     });
 
     socket.on("receive-caption", (data) => setRemoteCaption(data.text));
     socket.on("receive-sign", (receivedSign) => setRemoteSign(receivedSign));
     
-    // 🔥 Listen for Speech-to-Sign GIFs
     socket.on("receive-speech-gif", (data) => {
       setRemoteGif(data.gifUrl);
+      // Clears the GIF after 3.5 seconds
       setTimeout(() => setRemoteGif(null), 3500); 
     });
 
@@ -94,7 +98,7 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 3. Speech Recognition + GIF Trigger
+  // 3. Speech Recognition + Keyword GIF Trigger
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -102,6 +106,7 @@ const VideoCall = ({ roomId }) => {
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
+    recognition.lang = "en-US";
 
     recognition.onresult = (event) => {
       const transcript = Array.from(event.results)
@@ -111,10 +116,12 @@ const VideoCall = ({ roomId }) => {
       setLocalCaption(transcript);
       socket.emit("send-caption", { text: transcript, roomId });
 
-      // 🔥 GIF Logic
-      const keywords = ["hello", "thanks", "yes", "no", "please"];
-      const found = keywords.find(word => transcript.includes(word));
+      // Trigger GIF if keyword is found in the current transcript
+      const keywords = ["hello", "thanks", "yes", "no", "please", "sorry"];
+      const found = keywords.find(word => transcript.split(" ").includes(word));
+      
       if (found) {
+        // Points to your static GIF folder on the Render backend
         const gifUrl = `https://sign-bridge-backend.onrender.com/signs/${found}.gif`;
         socket.emit("send-speech-gif", { gifUrl, roomId });
       }
@@ -124,18 +131,20 @@ const VideoCall = ({ roomId }) => {
     return () => recognition.stop();
   }, [roomId]);
 
-  // 4. Drawing Landmarks
+  // 4. Drawing ML Landmarks
   const drawLandmarks = useCallback((landmarks) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    
+    // Scale canvas to match display size
     canvas.width = canvas.clientWidth;
     canvas.height = canvas.clientHeight;
     
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (!landmarks) return;
+    if (!landmarks || landmarks.length === 0) return;
 
-    ctx.fillStyle = "#10b981";
+    ctx.fillStyle = "#10b981"; // Emerald Green
     landmarks.forEach((point) => {
       const x = (1 - point.x) * canvas.width; 
       const y = point.y * canvas.height;
@@ -145,16 +154,18 @@ const VideoCall = ({ roomId }) => {
     });
   }, []);
 
-  // 5. AI Prediction Loop (Optimized for Wake-up)
+  // 5. AI Prediction Loop (Optimized for Render Free Tier)
   const sendFrameToBackend = useCallback(async () => {
     if (!localVideo.current || localVideo.current.readyState !== 4) return;
     
     const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = 320; // ⚡ Reduced resolution
+    captureCanvas.width = 320; 
     captureCanvas.height = 240;
     const ctx = captureCanvas.getContext("2d");
     ctx.drawImage(localVideo.current, 0, 0, 320, 240);
-    const image = captureCanvas.toDataURL("image/jpeg", 0.4); // ⚡ Reduced quality
+    
+    // Lower quality (0.4) reduces payload size for faster wake-up
+    const image = captureCanvas.toDataURL("image/jpeg", 0.4);
 
     try {
       const res = await fetch("https://sign-bridge-backend.onrender.com/predict", {
@@ -166,11 +177,11 @@ const VideoCall = ({ roomId }) => {
         body: JSON.stringify({ image }),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Backend Offline");
 
       const data = await res.json();
       setIsAiConnected(true);
-      drawLandmarks(data.landmarks);
+      drawLandmarks(data.landmarks || []);
 
       if (data.sign && data.sign !== lastSignRef.current) {
         if (data.confidence > 60 || data.sign === "No Sign") {
@@ -180,21 +191,21 @@ const VideoCall = ({ roomId }) => {
           socket.emit("send-sign", data.sign, roomId);
         }
       }
-    } catch {
+    } catch  {
       setIsAiConnected(false);
-      console.log("Wake-up request sent to Render...");
+      console.warn("AI Backend is booting up or unreachable.");
     }
   }, [roomId, drawLandmarks]);
 
   useEffect(() => {
-    const interval = setInterval(sendFrameToBackend, 1200); // ⚡ Slightly longer interval
+    const interval = setInterval(sendFrameToBackend, 1500); // 1.5s interval to prevent overloading
     return () => clearInterval(interval);
   }, [sendFrameToBackend]);
 
   return (
     <div style={styles.container}>
       <div style={styles.videoGrid}>
-        {/* LOCAL */}
+        {/* LOCAL USER */}
         <div style={styles.videoWrapper}>
           <div style={{...styles.badge, background: isAiConnected ? "#10b981" : "#ef4444"}}>
             {isAiConnected ? "AI ACTIVE" : "AI OFFLINE (Wake-up Required)"}
@@ -204,18 +215,20 @@ const VideoCall = ({ roomId }) => {
           <div style={styles.captionOverlay}>{localCaption || "Listening..."}</div>
           <div style={styles.signOverlay}>
             <div style={styles.signInfo}>
-               <span style={styles.signLabel}>{sign || "Scanning..."}</span>
-               {confidence > 0 && <span style={styles.confText}>{confidence.toFixed(0)}% Match</span>}
+               <span style={styles.signLabel}>{sign || "SCANNING"}</span>
+               {confidence > 0 && sign !== "No Sign" && (
+                 <span style={styles.confText}>{confidence.toFixed(0)}% Match</span>
+               )}
             </div>
           </div>
         </div>
 
-        {/* REMOTE */}
+        {/* REMOTE USER */}
         <div style={styles.videoWrapper}>
           <div style={styles.badgeRed}>REMOTE</div>
           <video ref={remoteVideo} autoPlay playsInline style={styles.remoteVideo} />
           
-          {/* 🔥 GIF OVERLAY */}
+          {/* GIF OVERLAY FOR SPEECH-TO-SIGN */}
           {remoteGif && (
             <div style={styles.gifOverlay}>
               <img src={remoteGif} alt="sign-gif" style={styles.signGif} />
@@ -225,7 +238,7 @@ const VideoCall = ({ roomId }) => {
           <div style={styles.captionOverlay}>{remoteCaption || "No remote captions"}</div>
           <div style={styles.signOverlay}>
             <div style={styles.signInfo}>
-              <span style={styles.signLabel}>{remoteSign || "Waiting for Sign..."}</span>
+              <span style={styles.signLabel}>{remoteSign || "NO SIGN DETECTED"}</span>
             </div>
           </div>
         </div>
@@ -236,7 +249,7 @@ const VideoCall = ({ roomId }) => {
         await peerConnection.current.setLocalDescription(offer);
         socket.emit("offer", offer, roomId);
       }} style={styles.callBtn}>
-        Start Video Call 🎥
+        Connect Call 💬
       </button>
     </div>
   );
