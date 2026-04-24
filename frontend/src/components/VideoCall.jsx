@@ -180,7 +180,7 @@ const VideoCall = ({ roomId }) => {
     try {
       const res = await fetch("https://sign-bridge-backend.onrender.com/predict", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify({ image }),
       });
 
