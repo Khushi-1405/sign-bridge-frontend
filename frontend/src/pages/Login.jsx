@@ -31,91 +31,86 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-white font-sans overflow-hidden">
-      
-      {/* --- RADAR VISUAL SECTION --- */}
-      <div className="relative w-72 h-72 sm:w-80 sm:h-80 md:w-96 md:h-96 flex items-center justify-center mb-8">
-        
-        {/* Concentric Circles using Tailwind Rings/Borders */}
-        <div className="absolute inset-0 border border-gray-100 rounded-full"></div>
-        <div className="absolute inset-[15%] border border-gray-100 rounded-full"></div>
-        <div className="absolute inset-[30%] bg-pink-50/60 rounded-full animate-pulse"></div>
-        
-        {/* Floating Avatars with Fixed Tailwind Positions */}
-        <div className="absolute top-[5%] left-[20%] w-12 h-12 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
-          <img src="https://i.pravatar.cc/150?u=1" className="w-full h-full object-cover" alt="" />
-        </div>
-        <div className="absolute top-[40%] -left-4 w-14 h-14 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
-          <img src="https://i.pravatar.cc/150?u=2" className="w-full h-full object-cover" alt="" />
-        </div>
-        <div className="absolute bottom-[10%] left-[15%] w-10 h-10 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
-          <img src="https://i.pravatar.cc/150?u=3" className="w-full h-full object-cover" alt="" />
-        </div>
-        <div className="absolute top-[20%] right-[5%] w-14 h-14 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
-          <img src="https://i.pravatar.cc/150?u=4" className="w-full h-full object-cover" alt="" />
-        </div>
-        <div className="absolute bottom-[20%] right-[10%] w-12 h-12 rounded-full border-4 border-white shadow-xl overflow-hidden z-20">
-          <img src="https://i.pravatar.cc/150?u=5" className="w-full h-full object-cover" alt="" />
-        </div>
+    <div style={s.screen}>
+      {/* RADAR SECTION */}
+      <div style={s.radarContainer}>
+        {/* Rings */}
+        <div style={{...s.ring, width: '100%', height: '100%'}}></div>
+        <div style={{...s.ring, width: '70%', height: '70%'}}></div>
+        <div style={s.pulseCircle}></div>
 
-        {/* Center Main Profile */}
-        <div className="relative w-24 h-24 rounded-full border-[6px] border-white shadow-2xl overflow-hidden z-30">
-          <img src="https://i.pravatar.cc/150?u=khushi" className="w-full h-full object-cover" alt="Me" />
-        </div>
+        {/* Floating Avatars */}
+        <img src="https://i.pravatar.cc/150?u=1" style={{...s.avatar, top: '5%', left: '20%', width: '50px', height: '50px'}} alt="" />
+        <img src="https://i.pravatar.cc/150?u=2" style={{...s.avatar, top: '40%', left: '-20px', width: '55px', height: '55px'}} alt="" />
+        <img src="https://i.pravatar.cc/150?u=4" style={{...s.avatar, top: '15%', right: '5%', width: '55px', height: '55px'}} alt="" />
+        <img src="https://i.pravatar.cc/150?u=5" style={{...s.avatar, bottom: '15%', right: '15%', width: '50px', height: '50px'}} alt="" />
 
-        {/* Decorative Notification Dot */}
-        <div className="absolute bottom-[30%] right-[30%] w-4 h-4 bg-pink-500 rounded-full border-2 border-white shadow-md z-40"></div>
+        {/* Center Profile */}
+        <div style={s.centerProfile}>
+          <img src="https://i.pravatar.cc/150?u=main" style={{width: '100%', height: '100%', objectFit: 'cover'}} alt="Me" />
+        </div>
+        
+        {/* Pink Dot */}
+        <div style={s.pinkDot}></div>
       </div>
 
-      {/* --- FORM SECTION --- */}
-      <div className="w-full max-w-sm px-6 text-center">
-        <h1 className="text-3xl font-black text-gray-900 leading-tight mb-8">
-          Let's meeting new<br />people around you
-        </h1>
+      {/* FORM SECTION */}
+      <div style={s.formWrapper}>
+        <h1 style={s.title}>Let's meeting new<br />people around you</h1>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-          <div className="space-y-3">
-            <input 
-              type="email" 
-              placeholder="Email Address" 
-              className="w-full bg-gray-50 border-none px-6 py-4 rounded-full text-gray-800 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)} 
-              required 
-            />
-            <input 
-              type="password" 
-              placeholder="Password" 
-              className="w-full bg-gray-50 border-none px-6 py-4 rounded-full text-gray-800 focus:ring-2 focus:ring-purple-100 transition-all outline-none"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)} 
-              required 
-            />
-          </div>
+        <form onSubmit={handleLogin} style={s.form}>
+          <input 
+            type="email" 
+            placeholder="Email Address" 
+            style={s.input}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+          />
+          <input 
+            type="password" 
+            placeholder="Password" 
+            style={s.input}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+          />
 
-          <button 
-            type="submit" 
-            className="w-full flex items-center justify-center gap-3 bg-[#421d4a] text-white font-bold py-4 rounded-full shadow-lg hover:bg-[#2d1432] active:scale-95 transition-all"
-          >
-            <span className="text-lg">📱</span>
-            Login with Account
+          <button type="submit" style={s.primaryBtn}>
+            <span style={{fontSize: '20px'}}>📱</span> Login with Account
           </button>
 
-          <button 
-            type="button" 
-            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-100 text-gray-600 font-bold py-4 rounded-full shadow-sm hover:bg-gray-50 active:scale-95 transition-all"
-          >
-            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" alt="G" className="w-5 h-5"/>
+          <button type="button" style={s.secondaryBtn}>
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" style={{width: '20px'}} alt=""/>
             Login with Google
           </button>
         </form>
 
-        <p className="mt-8 text-sm text-gray-400">
-          Don't have an account? <span className="text-pink-500 font-bold cursor-pointer hover:underline" onClick={() => navigate("/register")}>Sign Up</span>
+        <p style={s.footerText}>
+          Don't have an account? <span style={s.link} onClick={() => navigate("/register")}>Sign Up</span>
         </p>
       </div>
     </div>
   );
+};
+
+// INLINE STYLES - Guaranteed to work even if Tailwind fails
+const s = {
+  screen: { minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', fontFamily: 'sans-serif', padding: '20px', overflow: 'hidden' },
+  radarContainer: { position: 'relative', width: '300px', height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '40px' },
+  ring: { position: 'absolute', borderRadius: '50%', border: '1px solid #f3f4f6' },
+  pulseCircle: { position: 'absolute', width: '40%', height: '40%', backgroundColor: '#fdf2f8', borderRadius: '50%' },
+  avatar: { position: 'absolute', borderRadius: '50%', border: '4px solid #fff', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', objectFit: 'cover', zIndex: 10 },
+  centerProfile: { position: 'relative', width: '90px', height: '90px', borderRadius: '50%', border: '6px solid #fff', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 20 },
+  pinkDot: { position: 'absolute', bottom: '30%', right: '30%', width: '15px', height: '15px', backgroundColor: '#ec4899', borderRadius: '50%', border: '2px solid #fff', zIndex: 30 },
+  formWrapper: { width: '100%', maxWidth: '380px', textAlign: 'center' },
+  title: { fontSize: '28px', fontWeight: '900', color: '#111827', marginBottom: '30px', lineHeight: '1.2' },
+  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  input: { width: '100%', backgroundColor: '#f9fafb', border: 'none', padding: '16px 24px', borderRadius: '50px', outline: 'none', fontSize: '16px' },
+  primaryBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', backgroundColor: '#421d4a', color: '#fff', fontWeight: 'bold', padding: '16px', borderRadius: '50px', border: 'none', cursor: 'pointer', boxShadow: '0 10px 15px rgba(66, 29, 74, 0.2)' },
+  secondaryBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', backgroundColor: '#fff', color: '#4b5563', fontWeight: 'bold', padding: '16px', borderRadius: '50px', border: '1px solid #f3f4f6', cursor: 'pointer' },
+  footerText: { marginTop: '30px', color: '#9ca3af', fontSize: '14px' },
+  link: { color: '#ec4899', fontWeight: 'bold', cursor: 'pointer', marginLeft: '5px' }
 };
 
 export default Login;
