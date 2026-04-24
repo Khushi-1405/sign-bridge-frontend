@@ -7,33 +7,44 @@ const Home = () => {
 
   // 👤 FETCH LOGGED-IN USER DATA
   const user = JSON.parse(localStorage.getItem("user"));
-  const userId = user?.username; // Your customized username
-  const fullName = user?.name;   // Your actual name
-  const _profilePic = user?.profilePic; // For later use
+  const userId = user?.username; 
+  const fullName = user?.name;   
 
   const [roomInput, setRoomInput] = useState("");
   const [targetId, setTargetId] = useState("");
   const [incomingCall, setIncomingCall] = useState(null);
+  // ✅ FIXED: Changed 'sellsRegistered' to 'setIsRegistered' to match your usage
   const [isRegistered, setIsRegistered] = useState(false);
 
   // 🔌 SOCKET SETUP
   useEffect(() => {
-    // 1. Auth Guard: If no user is logged in, redirect to login
+    // 1. Auth Guard
     if (!userId) {
       navigate("/login");
-      return; // Stop execution if no user
+      return;
     }
 
-    // 2. Register user with socket if already connected
-    if (socket.connected) {
+    // Function to handle registration logic
+    const register = () => {
       socket.emit("register-user", userId);
-      //setIsRegistered(true);
+      // We don't set isRegistered to true here; 
+      // we wait for the 'registered' or 'me' event from server
+    };
+
+    // 2. Immediate Check
+    if (socket.connected) {
+      register();
     }
 
     // 3. Socket Event Listeners
     socket.on("connect", () => {
-      console.log("Socket connected:", socket.id);
-      socket.emit("register-user", userId);
+      console.log("✅ Socket connected:", socket.id);
+      register();
+    });
+
+    socket.on("me", (id) => {
+      console.log("🤝 Handshake received:", id);
+      setIsRegistered(true);
     });
 
     socket.on("registered", () => {
@@ -46,18 +57,24 @@ const Home = () => {
       setIncomingCall({ from, roomId });
     });
 
-    // 4. Cleanup on unmount
+    socket.on("disconnect", () => {
+      setIsRegistered(false);
+    });
+
+    // 4. Cleanup
     return () => {
       socket.off("connect");
+      socket.off("me");
       socket.off("registered");
       socket.off("incoming-call");
+      socket.off("disconnect");
     };
-  }, [userId, navigate]); // The bracket was closed too early before!
+  }, [userId, navigate]);
 
   // 📞 CALL USER
   const callUser = () => {
     if (!isRegistered) {
-      alert("⚠️ Connecting to server...");
+      alert("⏳ Connecting to server... please wait a moment.");
       return;
     }
     if (!targetId.trim()) return;
@@ -77,28 +94,26 @@ const Home = () => {
 
   // ❌ LOGOUT
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    // Using navigate instead of reload for a smoother SPA experience
+    localStorage.clear();
     navigate("/login"); 
   };
 
   return (
-    <div style={{ textAlign: "center", padding: "40px", backgroundColor: "#f0f2f5", minHeight: "100vh" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "800px", margin: "0 auto" }}>
-        <h1>🤟 Sign Bridge</h1>
+    <div style={styles.page}>
+      <div style={styles.header}>
+        <h1 style={styles.logo}>🤟 Sign Bridge</h1>
         <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
       </div>
 
-      <p style={{ color: "#666" }}>Connecting voices through signs 💙</p>
+      <p style={styles.subtext}>Connecting voices through signs 💙</p>
 
       {/* 📞 INCOMING CALL OVERLAY */}
       {incomingCall && (
         <div style={styles.overlay}>
           <div style={styles.cardDark}>
-            <h2>📞 Incoming Call</h2>
-            <p>{incomingCall.from} is calling you...</p>
-            <div style={{ display: "flex", gap: "20px", marginTop: "20px" }}>
+            <h2 style={{fontSize: '2rem'}}>📞 Incoming Call</h2>
+            <p style={{margin: '15px 0'}}>{incomingCall.from} is calling you...</p>
+            <div style={{ display: "flex", gap: "20px", marginTop: "20px", justifyContent: 'center' }}>
               <button style={styles.accept} onClick={acceptCall}>Accept</button>
               <button style={styles.reject} onClick={() => setIncomingCall(null)}>Reject</button>
             </div>
@@ -111,7 +126,7 @@ const Home = () => {
         <div style={styles.mainCard}>
           <h3>Welcome, {fullName}!</h3>
           <p>Your ID: <span style={{ color: "#6366f1", fontWeight: "bold" }}>{userId}</span></p>
-          <div style={styles.statusBadge}>
+          <div style={{...styles.statusBadge, color: isRegistered ? '#22c55e' : '#f59e0b'}}>
             {isRegistered ? "🟢 Online" : "⏳ Connecting..."}
           </div>
         </div>
@@ -146,17 +161,21 @@ const Home = () => {
 
 // 🎨 STYLES
 const styles = {
-  container: { maxWidth: "800px", margin: "20px auto", display: "grid", gap: "20px" },
-  mainCard: { background: "white", padding: "30px", borderRadius: "15px", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" },
-  input: { padding: "12px", width: "70%", borderRadius: "8px", border: "1px solid #ddd", marginRight: "10px", outline: "none" },
-  statusBadge: { marginTop: "10px", fontSize: "14px", color: "#444" },
-  callBtn: { background: "#6366f1", color: "white", border: "none", padding: "12px 25px", borderRadius: "8px", cursor: "pointer" },
-  joinBtn: { background: "#10b981", color: "white", border: "none", padding: "12px 25px", borderRadius: "8px", cursor: "pointer" },
-  logoutBtn: { background: "#ef4444", color: "white", border: "none", padding: "8px 15px", borderRadius: "5px", cursor: "pointer" },
-  overlay: { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.85)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
-  cardDark: { background: "#111", padding: "40px", borderRadius: "20px", textAlign: "center", color: "white" },
-  accept: { background: "#22c55e", color: "white", border: "none", padding: "12px 30px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" },
-  reject: { background: "#ef4444", color: "white", border: "none", padding: "12px 30px", borderRadius: "10px", cursor: "pointer", fontWeight: "bold" },
+  page: { textAlign: "center", padding: "40px", backgroundColor: "#f0f2f5", minHeight: "100vh" },
+  header: { display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "800px", margin: "0 auto" },
+  logo: { fontSize: '2.5rem', color: '#1a1a1a' },
+  subtext: { color: "#666", marginTop: '10px' },
+  container: { maxWidth: "800px", margin: "30px auto", display: "grid", gap: "20px" },
+  mainCard: { background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" },
+  input: { padding: "12px", width: "65%", borderRadius: "10px", border: "1px solid #ddd", marginRight: "10px", outline: "none" },
+  statusBadge: { marginTop: "15px", fontSize: "14px", fontWeight: '600' },
+  callBtn: { background: "#6366f1", color: "white", border: "none", padding: "12px 25px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
+  joinBtn: { background: "#10b981", color: "white", border: "none", padding: "12px 25px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
+  logoutBtn: { background: "#ef4444", color: "white", border: "none", padding: "10px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
+  overlay: { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.9)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
+  cardDark: { background: "#1f2937", padding: "50px", borderRadius: "30px", textAlign: "center", color: "white" },
+  accept: { background: "#22c55e", color: "white", border: "none", padding: "12px 30px", borderRadius: "12px", cursor: "pointer", fontWeight: "bold" },
+  reject: { background: "#ef4444", color: "white", border: "none", padding: "12px 30px", borderRadius: "12px", cursor: "pointer", fontWeight: "bold" },
 };
 
 export default Home;
