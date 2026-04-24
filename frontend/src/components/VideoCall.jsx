@@ -23,13 +23,12 @@ const VideoCall = ({ roomId }) => {
     const initStream = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480 }, // Fixed resolution for stability
+          video: { width: 640, height: 480 },
           audio: true,
         });
         streamRef.current = stream;
         if (localVideo.current) localVideo.current.srcObject = stream;
 
-        // Initialize PeerConnection
         peerConnection.current = new RTCPeerConnection({
           iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
         });
@@ -60,19 +59,35 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 2. Optimized Socket Listeners
+  // 2. Optimized Socket Listeners with Signaling State Checks
   useEffect(() => {
     socket.on("offer", async (offer) => {
       if (!peerConnection.current) return;
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
-      const answer = await peerConnection.current.createAnswer();
-      await peerConnection.current.setLocalDescription(answer);
-      socket.emit("answer", answer, roomId);
+
+      // 🔥 FIX: Only process offer if stable to avoid collisions
+      if (peerConnection.current.signalingState !== "stable") return;
+
+      try {
+        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
+        const answer = await peerConnection.current.createAnswer();
+        await peerConnection.current.setLocalDescription(answer);
+        socket.emit("answer", answer, roomId);
+      } catch (err) {
+        console.error("Offer Error:", err);
+      }
     });
 
     socket.on("answer", async (answer) => {
       if (!peerConnection.current) return;
-      await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+
+      // 🔥 FIX: Only process answer if we actually sent an offer
+      if (peerConnection.current.signalingState !== "have-local-offer") return;
+
+      try {
+        await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
+      } catch (err) {
+        console.error("Answer Error:", err);
+      }
     });
 
     socket.on("ice-candidate", async (candidate) => {
@@ -100,7 +115,7 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 3. Browser-Based Speech Recognition (Render Headless Friendly)
+  // 3. Browser-Based Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -155,12 +170,11 @@ const VideoCall = ({ roomId }) => {
     if (!localVideo.current || localVideo.current.readyState !== 4) return;
     
     const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = 320; // Small resolution = Smaller payload
+    captureCanvas.width = 320; 
     captureCanvas.height = 240;
     const ctx = captureCanvas.getContext("2d");
     ctx.drawImage(localVideo.current, 0, 0, 320, 240);
     
-    // Quality 0.3 is the "Sweet Spot" for Render Free Tier to avoid 413 Errors
     const image = captureCanvas.toDataURL("image/jpeg", 0.3);
 
     try {
@@ -190,14 +204,13 @@ const VideoCall = ({ roomId }) => {
   }, [roomId, drawLandmarks]);
 
   useEffect(() => {
-    const aiInterval = setInterval(sendFrameToBackend, 1500); // 1.5s gives the free tier time to breathe
+    const aiInterval = setInterval(sendFrameToBackend, 1500);
     return () => clearInterval(aiInterval);
   }, [sendFrameToBackend]);
 
   return (
     <div style={styles.container}>
       <div style={styles.videoGrid}>
-        {/* Local Video Section */}
         <div style={styles.videoWrapper}>
           <div style={{...styles.badge, background: isAiConnected ? "#10b981" : "#ef4444"}}>
             {isAiConnected ? "AI ACTIVE" : "AI OFFLINE (Waking Up...)"}
@@ -213,7 +226,6 @@ const VideoCall = ({ roomId }) => {
           </div>
         </div>
 
-        {/* Remote Video Section */}
         <div style={styles.videoWrapper}>
           <div style={styles.badgeRed}>REMOTE</div>
           <video ref={remoteVideo} autoPlay playsInline style={styles.remoteVideo} />
@@ -233,6 +245,7 @@ const VideoCall = ({ roomId }) => {
 
       <div style={styles.controls}>
         <button onClick={async () => {
+          if (peerConnection.current.signalingState !== "stable") return;
           const offer = await peerConnection.current.createOffer();
           await peerConnection.current.setLocalDescription(offer);
           socket.emit("offer", offer, roomId);
