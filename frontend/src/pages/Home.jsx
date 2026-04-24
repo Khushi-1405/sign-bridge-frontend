@@ -13,55 +13,34 @@ const Home = () => {
   const [roomInput, setRoomInput] = useState("");
   const [targetId, setTargetId] = useState("");
   const [incomingCall, setIncomingCall] = useState(null);
-  // ✅ FIXED: Changed 'sellsRegistered' to 'setIsRegistered' to match your usage
   const [isRegistered, setIsRegistered] = useState(false);
 
-  // 🔌 SOCKET SETUP
+  // Example "Recent" list
+  const recentCalls = [
+    { id: "Alfredo", name: "Alfredo Calzoni", img: "https://i.pravatar.cc/150?u=alfredo" },
+    { id: "Clara", name: "Clara Hazel", img: "https://i.pravatar.cc/150?u=clara" },
+    { id: "Brandon", name: "Brandon Aminoff", img: "https://i.pravatar.cc/150?u=brandon" },
+    { id: "Amina", name: "Amina Mina", img: "https://i.pravatar.cc/150?u=amina" },
+  ];
+
   useEffect(() => {
-    // 1. Auth Guard
     if (!userId) {
       navigate("/login");
       return;
     }
 
-    // Function to handle registration logic
     const register = () => {
       socket.emit("register-user", userId);
-      // We don't set isRegistered to true here; 
-      // we wait for the 'registered' or 'me' event from server
     };
 
-    // 2. Immediate Check
-    if (socket.connected) {
-      register();
-    }
+    if (socket.connected) register();
 
-    // 3. Socket Event Listeners
-    socket.on("connect", () => {
-      console.log("✅ Socket connected:", socket.id);
-      register();
-    });
+    socket.on("connect", register);
+    socket.on("me", () => setIsRegistered(true));
+    socket.on("registered", () => setIsRegistered(true));
+    socket.on("incoming-call", ({ from, roomId }) => setIncomingCall({ from, roomId }));
+    socket.on("disconnect", () => setIsRegistered(false));
 
-    socket.on("me", (id) => {
-      console.log("🤝 Handshake received:", id);
-      setIsRegistered(true);
-    });
-
-    socket.on("registered", () => {
-      console.log("✅ Registered with username:", userId);
-      setIsRegistered(true);
-    });
-
-    socket.on("incoming-call", ({ from, roomId }) => {
-      console.log("📞 Incoming call from:", from);
-      setIncomingCall({ from, roomId });
-    });
-
-    socket.on("disconnect", () => {
-      setIsRegistered(false);
-    });
-
-    // 4. Cleanup
     return () => {
       socket.off("connect");
       socket.off("me");
@@ -71,111 +50,148 @@ const Home = () => {
     };
   }, [userId, navigate]);
 
-  // 📞 CALL USER
-  const callUser = () => {
-    if (!isRegistered) {
-      alert("⏳ Connecting to server... please wait a moment.");
-      return;
-    }
-    if (!targetId.trim()) return;
+  const callUser = (id) => {
+    const finalId = id || targetId;
+    if (!isRegistered) return alert("Connecting to server...");
+    if (!finalId.trim()) return;
 
-    const roomId = [userId, targetId].sort().join("-");
-    socket.emit("call-user", { targetId, from: userId, roomId });
+    const roomId = [userId, finalId].sort().join("-");
+    socket.emit("call-user", { targetId: finalId, from: userId, roomId });
     navigate(`/call/${roomId}`);
   };
 
-  // ✅ ACCEPT CALL
-  const acceptCall = () => {
-    if (incomingCall) {
-      navigate(`/call/${incomingCall.roomId}`);
-      setIncomingCall(null);
-    }
-  };
-
-  // ❌ LOGOUT
   const handleLogout = () => {
     localStorage.clear();
     navigate("/login"); 
   };
 
   return (
-    <div style={styles.page}>
-      <div style={styles.header}>
-        <h1 style={styles.logo}>🤟 Sign Bridge</h1>
-        <button onClick={handleLogout} style={styles.logoutBtn}>Logout</button>
+    <div style={s.page}>
+      {/* PURPLE TOP SECTION */}
+      <div style={s.topPanel}>
+        <div style={s.header}>
+          <div style={s.backBtn}>👋 Hi, {fullName?.split(' ')[0]}</div>
+          <h1 style={s.pageTitle}>Messages</h1>
+          <button onClick={handleLogout} style={s.logoutBtn}>Logout</button>
+        </div>
+
+        <div style={s.recentSection}>
+          <p style={s.sectionLabel}>Recent Matches</p>
+          <div style={s.recentRow}>
+             {recentCalls.map((item) => (
+               <div key={item.id} style={s.recentAvatarWrapper} onClick={() => callUser(item.id)}>
+                 <img src={item.img} style={s.recentAvatar} alt={item.name} />
+                 <div style={s.activeDot}></div>
+               </div>
+             ))}
+          </div>
+        </div>
       </div>
 
-      <p style={styles.subtext}>Connecting voices through signs 💙</p>
+      {/* WHITE BOTTOM LIST SECTION */}
+      <div style={s.listPanel}>
+        <div style={s.handleBar}></div>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '25px' }}>
+          {/* 1. CALL BY USER ID */}
+          <div style={s.inputContainer}>
+            <input
+              style={s.searchBar}
+              placeholder="Enter User ID to Call..."
+              value={targetId}
+              onChange={(e) => setTargetId(e.target.value)}
+            />
+            <button onClick={() => callUser()} style={s.fabCall}>📞</button>
+          </div>
 
-      {/* 📞 INCOMING CALL OVERLAY */}
+          {/* 2. JOIN BY ROOM NAME (Uses roomInput) */}
+          <div style={s.inputContainer}>
+            <input
+              style={{ ...s.searchBar, backgroundColor: '#f3f4f6' }}
+              placeholder="Join Meeting Room Name..."
+              value={roomInput}
+              onChange={(e) => setRoomInput(e.target.value)}
+            />
+            <button 
+              onClick={() => roomInput && navigate(`/call/${roomInput}`)} 
+              style={{ ...s.fabCall, backgroundColor: '#10b981' }}
+            >
+              🔗
+            </button>
+          </div>
+        </div>
+
+        {/* CALL LIST */}
+        <div style={s.callList}>
+          {recentCalls.map((item) => (
+            <div key={item.id} style={s.callItem} onClick={() => callUser(item.id)}>
+              <img src={item.img} style={s.itemAvatar} alt="" />
+              <div style={s.itemInfo}>
+                <div style={s.itemName}>{item.name}</div>
+                <div style={s.itemSub}>Online • Click to call</div>
+              </div>
+              <div style={s.statusText}>Active</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* INCOMING CALL MODAL */}
       {incomingCall && (
-        <div style={styles.overlay}>
-          <div style={styles.cardDark}>
-            <h2 style={{fontSize: '2rem'}}>📞 Incoming Call</h2>
-            <p style={{margin: '15px 0'}}>{incomingCall.from} is calling you...</p>
-            <div style={{ display: "flex", gap: "20px", marginTop: "20px", justifyContent: 'center' }}>
-              <button style={styles.accept} onClick={acceptCall}>Accept</button>
-              <button style={styles.reject} onClick={() => setIncomingCall(null)}>Reject</button>
+        <div style={s.overlay}>
+          <div style={s.modal}>
+            <div style={s.modalAvatar}>
+              <img src={`https://i.pravatar.cc/150?u=${incomingCall.from}`} style={{width:'100%'}} alt=""/>
+            </div>
+            <h2 style={{marginTop:'20px', color: '#111827'}}>Incoming Call</h2>
+            <p style={{color:'#6b7280', marginBottom: '30px'}}>{incomingCall.from} is calling...</p>
+            <div style={s.modalActions}>
+              <button style={s.acceptBtn} onClick={() => navigate(`/call/${incomingCall.roomId}`)}>Accept</button>
+              <button style={s.rejectBtn} onClick={() => setIncomingCall(null)}>Decline</button>
             </div>
           </div>
         </div>
       )}
-
-      <div style={styles.container}>
-        {/* 👤 PROFILE CARD */}
-        <div style={styles.mainCard}>
-          <h3>Welcome, {fullName}!</h3>
-          <p>Your ID: <span style={{ color: "#6366f1", fontWeight: "bold" }}>{userId}</span></p>
-          <div style={{...styles.statusBadge, color: isRegistered ? '#22c55e' : '#f59e0b'}}>
-            {isRegistered ? "🟢 Online" : "⏳ Connecting..."}
-          </div>
-        </div>
-
-        {/* 📞 START CALL */}
-        <div style={styles.mainCard}>
-          <h3>Start a Call</h3>
-          <input
-            style={styles.input}
-            placeholder="Enter Friend's ID"
-            value={targetId}
-            onChange={(e) => setTargetId(e.target.value)}
-          />
-          <button onClick={callUser} style={styles.callBtn}>Call 📞</button>
-        </div>
-
-        {/* 🔗 JOIN BY ROOM */}
-        <div style={styles.mainCard}>
-          <h3>Join via Room ID</h3>
-          <input
-            style={styles.input}
-            placeholder="Room Name"
-            value={roomInput}
-            onChange={(e) => setRoomInput(e.target.value)}
-          />
-          <button onClick={() => roomInput && navigate(`/call/${roomInput}`)} style={styles.joinBtn}>Join 🔗</button>
-        </div>
-      </div>
     </div>
   );
 };
 
-// 🎨 STYLES
-const styles = {
-  page: { textAlign: "center", padding: "40px", backgroundColor: "#f0f2f5", minHeight: "100vh" },
-  header: { display: "flex", justifyContent: "space-between", alignItems: "center", maxWidth: "800px", margin: "0 auto" },
-  logo: { fontSize: '2.5rem', color: '#1a1a1a' },
-  subtext: { color: "#666", marginTop: '10px' },
-  container: { maxWidth: "800px", margin: "30px auto", display: "grid", gap: "20px" },
-  mainCard: { background: "white", padding: "30px", borderRadius: "20px", boxShadow: "0 4px 15px rgba(0,0,0,0.05)" },
-  input: { padding: "12px", width: "65%", borderRadius: "10px", border: "1px solid #ddd", marginRight: "10px", outline: "none" },
-  statusBadge: { marginTop: "15px", fontSize: "14px", fontWeight: '600' },
-  callBtn: { background: "#6366f1", color: "white", border: "none", padding: "12px 25px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
-  joinBtn: { background: "#10b981", color: "white", border: "none", padding: "12px 25px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
-  logoutBtn: { background: "#ef4444", color: "white", border: "none", padding: "10px 20px", borderRadius: "10px", cursor: "pointer", fontWeight: 'bold' },
-  overlay: { position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh", backgroundColor: "rgba(0,0,0,0.9)", display: "flex", justifyContent: "center", alignItems: "center", zIndex: 9999 },
-  cardDark: { background: "#1f2937", padding: "50px", borderRadius: "30px", textAlign: "center", color: "white" },
-  accept: { background: "#22c55e", color: "white", border: "none", padding: "12px 30px", borderRadius: "12px", cursor: "pointer", fontWeight: "bold" },
-  reject: { background: "#ef4444", color: "white", border: "none", padding: "12px 30px", borderRadius: "12px", cursor: "pointer", fontWeight: "bold" },
+const s = {
+  page: { height: '100vh', width: '100%', backgroundColor: '#421d4a', display: 'flex', flexDirection: 'column', overflow: 'hidden', fontFamily: 'sans-serif' },
+  topPanel: { padding: '40px 25px 30px 25px', color: 'white' },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' },
+  backBtn: { fontSize: '14px', opacity: 0.8 },
+  pageTitle: { fontSize: '24px', fontWeight: 'bold' },
+  logoutBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '8px 15px', borderRadius: '20px', cursor: 'pointer', fontSize: '12px' },
+  
+  recentSection: { marginTop: '10px' },
+  sectionLabel: { fontSize: '13px', marginBottom: '15px', opacity: 0.9 },
+  recentRow: { display: 'flex', gap: '15px', overflowX: 'auto', paddingBottom: '10px' },
+  recentAvatarWrapper: { position: 'relative', flexShrink: 0, cursor: 'pointer' },
+  recentAvatar: { width: '65px', height: '65px', borderRadius: '18px', border: '2px solid rgba(255,255,255,0.2)', objectFit: 'cover' },
+  activeDot: { position: 'absolute', top: '-2px', right: '-2px', width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%', border: '2px solid #421d4a' },
+
+  listPanel: { flex: 1, backgroundColor: 'white', borderTopLeftRadius: '40px', borderTopRightRadius: '40px', padding: '25px 20px', display: 'flex', flexDirection: 'column', boxShadow: '0 -10px 20px rgba(0,0,0,0.1)' },
+  handleBar: { width: '40px', height: '5px', backgroundColor: '#e5e7eb', borderRadius: '10px', alignSelf: 'center', marginBottom: '25px' },
+  
+  inputContainer: { display: 'flex', gap: '10px' },
+  searchBar: { flex: 1, backgroundColor: '#f9fafb', border: 'none', padding: '15px 20px', borderRadius: '20px', outline: 'none', fontSize: '14px' },
+  fabCall: { backgroundColor: '#421d4a', border: 'none', color: 'white', width: '50px', height: '50px', borderRadius: '18px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+
+  callList: { flex: 1, overflowY: 'auto' },
+  callItem: { display: 'flex', alignItems: 'center', padding: '15px 0', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' },
+  itemAvatar: { width: '55px', height: '55px', borderRadius: '15px', marginRight: '15px', objectFit: 'cover' },
+  itemInfo: { flex: 1 },
+  itemName: { fontWeight: 'bold', color: '#111827', marginBottom: '4px' },
+  itemSub: { fontSize: '13px', color: '#9ca3af' },
+  statusText: { fontSize: '11px', color: '#ec4899', fontWeight: 'bold' },
+
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
+  modal: { backgroundColor: 'white', width: '100%', maxWidth: '320px', borderRadius: '40px', padding: '40px 25px', textAlign: 'center' },
+  modalAvatar: { width: '100px', height: '100px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto', border: '5px solid #f3f4f6' },
+  modalActions: { display: 'flex', gap: '12px' },
+  acceptBtn: { flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' },
+  rejectBtn: { flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '16px', borderRadius: '20px', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default Home;
