@@ -2,8 +2,7 @@ import React, { useState } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-// Use environment variable for the API URL, falling back to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://sign-bridge-frontend-am22.onrender.com";
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -14,125 +13,127 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // 1. Send registration request with withCredentials for CORS support
       const res = await axios.post(
         `${API_BASE_URL}/api/auth/register`, 
         formData,
         { withCredentials: true }
       );
       
-      console.log("Registration Success:", res.data);
-
-      // 2. ✅ AUTO-LOGIN LOGIC
-      // Check if backend sends token and user data (handling both flat and nested structures)
       const token = res.data.token;
       const userData = res.data.user || res.data;
 
       if (token && userData.username) {
         localStorage.setItem("token", token);
         localStorage.setItem("user", JSON.stringify(userData));
-        localStorage.setItem("userId", userData.username); // Required for Socket.io registration
-
+        localStorage.setItem("userId", userData.username);
         alert("Registration Successful! Welcome to Sign Bridge.");
-        navigate("/"); // Move straight to Home
+        navigate("/"); 
       } else {
-        // Fallback if backend doesn't perform auto-login on register
         alert("Account created successfully! Please sign in.");
         navigate("/login");
       }
     } catch (err) {
-      console.error("Registration Error:", err);
-      alert(err.response?.data?.message || err.response?.data || "Registration failed. Please try again.");
+      alert(err.response?.data?.message || "Registration failed. Please try again.");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020603] p-4 font-sans">
-      {/* Background Ambient Glow */}
-      <div className="fixed top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#8be452]/5 blur-[120px] rounded-full"></div>
-      
-      <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl z-10">
-        
-        {/* LEFT PANEL: Branding/Nav */}
-        <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-[40px] flex flex-col justify-center shadow-2xl order-2 md:order-1">
-          <h1 className="text-white text-6xl font-bold mb-4 tracking-tight">Join Us!</h1>
-          <p className="text-gray-400 text-lg mb-10 max-w-xs leading-relaxed">
-            Create your Sign Bridge account and start connecting through signs 🤟
-          </p>
-          
-          <div className="flex flex-col gap-4">
-             <button 
-              type="button"
-              onClick={() => navigate("/login")}
-              className="border border-white/20 text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-colors"
-            >
-              SIGN IN
-            </button>
-            <button type="button" className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(139,228,82,0.4)] hover:scale-[1.02] transition-transform">
-              SIGN UP
-            </button>
-          </div>
-        </div>
+    <div style={s.screen}>
+      {/* RADAR SECTION (Visual Consistency) */}
+      <div style={s.radarContainer}>
+        <div style={{...s.ring, width: '100%', height: '100%'}}></div>
+        <div style={{...s.ring, width: '70%', height: '70%'}}></div>
+        <div style={s.pulseCircle}></div>
 
-        {/* RIGHT PANEL: Registration Form */}
-        <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 p-10 rounded-[40px] shadow-2xl order-1 md:order-2">
-          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <h2 className="text-white text-2xl font-semibold mb-2">Create Account</h2>
-            
+        {/* Dynamic Avatars */}
+        <img src="https://i.pravatar.cc/150?u=9" style={{...s.avatar, top: '5%', left: '20%', width: '45px', height: '45px'}} alt="" />
+        <img src="https://i.pravatar.cc/150?u=12" style={{...s.avatar, bottom: '20%', right: '10%', width: '55px', height: '55px'}} alt="" />
+        <img src="https://i.pravatar.cc/150?u=8" style={{...s.avatar, top: '35%', right: '-10px', width: '40px', height: '40px'}} alt="" />
+
+        <div style={s.centerProfile}>
+          <img src="https://i.pravatar.cc/150?u=newuser" style={{width: '100%', height: '100%', objectFit: 'cover'}} alt="New User" />
+        </div>
+        <div style={{...s.pinkDot, backgroundColor: '#8be452'}}></div> {/* Green dot for "New" */}
+      </div>
+
+      {/* REGISTRATION FORM SECTION */}
+      <div style={s.formWrapper}>
+        <h1 style={s.title}>Create your account<br />to start connecting</h1>
+
+        <form onSubmit={handleSubmit} style={s.form}>
+          <div style={s.inputGroup}>
             <input 
               type="text" 
               placeholder="Username" 
-              className="w-full bg-[#0a0f0a]/50 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+              style={s.input}
               onChange={(e) => setFormData({...formData, username: e.target.value})} 
               required 
             />
-            
             <input 
               type="text" 
               placeholder="Full Name" 
-              className="w-full bg-[#0a0f0a]/50 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+              style={s.input}
               onChange={(e) => setFormData({...formData, name: e.target.value})} 
               required 
             />
-
             <input 
               type="email" 
               placeholder="Email Address" 
-              className="w-full bg-[#0a0f0a]/50 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+              style={s.input}
               onChange={(e) => setFormData({...formData, email: e.target.value})} 
               required 
             />
-
-            <div className="flex flex-col gap-1">
-              <label className="text-gray-500 text-xs ml-2">Date of Birth</label>
-              <input 
-                type="date" 
-                className="w-full bg-[#0a0f0a]/50 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all color-scheme-dark"
-                onChange={(e) => setFormData({...formData, dob: e.target.value})} 
-                required 
-              />
+            <div style={s.dateContainer}>
+                <label style={s.dateLabel}>Date of Birth</label>
+                <input 
+                    type="date" 
+                    style={s.inputDate}
+                    onChange={(e) => setFormData({...formData, dob: e.target.value})} 
+                    required 
+                />
             </div>
-
             <input 
               type="password" 
               placeholder="Password" 
-              className="w-full bg-[#0a0f0a]/50 border border-white/10 p-4 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+              style={s.input}
               onChange={(e) => setFormData({...formData, password: e.target.value})} 
               required 
             />
+          </div>
 
-            <button type="submit" className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_25px_rgba(139,228,82,0.5)] hover:brightness-110 transition-all mt-4">
-              CREATE ACCOUNT
-            </button>
+          <button type="submit" style={s.primaryBtn}>
+            <span style={{fontSize: '20px'}}>✨</span> CREATE ACCOUNT
+          </button>
+        </form>
 
-            <p className="text-gray-500 text-sm mt-4 text-center">
-              Already have an account? <span className="text-white cursor-pointer font-bold hover:underline" onClick={() => navigate("/login")}>Sign in</span>
-            </p>
-          </form>
-        </div>
+        <p style={s.footerText}>
+          Already have an account? <span style={s.link} onClick={() => navigate("/login")}>Sign In</span>
+        </p>
       </div>
     </div>
   );
+};
+
+// CONSISTENT INLINE STYLES
+const s = {
+  screen: { minHeight: '100vh', width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backgroundColor: '#fff', fontFamily: 'sans-serif', padding: '40px 20px', overflowX: 'hidden' },
+  radarContainer: { position: 'relative', width: '260px', height: '260px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '30px' },
+  ring: { position: 'absolute', borderRadius: '50%', border: '1px solid #f3f4f6' },
+  pulseCircle: { position: 'absolute', width: '40%', height: '40%', backgroundColor: '#f5f3ff', borderRadius: '50%' },
+  avatar: { position: 'absolute', borderRadius: '50%', border: '4px solid #fff', boxShadow: '0 10px 15px rgba(0,0,0,0.05)', objectFit: 'cover', zIndex: 10 },
+  centerProfile: { position: 'relative', width: '80px', height: '80px', borderRadius: '50%', border: '6px solid #fff', boxShadow: '0 20px 25px rgba(0,0,0,0.1)', overflow: 'hidden', zIndex: 20 },
+  pinkDot: { position: 'absolute', bottom: '30%', right: '30%', width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #fff', zIndex: 30 },
+  formWrapper: { width: '100%', maxWidth: '380px', textAlign: 'center' },
+  title: { fontSize: '26px', fontWeight: '900', color: '#111827', marginBottom: '25px', lineHeight: '1.2' },
+  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  inputGroup: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  input: { width: '100%', backgroundColor: '#f9fafb', border: 'none', padding: '14px 20px', borderRadius: '50px', outline: 'none', fontSize: '15px', color: '#374151' },
+  dateContainer: { textAlign: 'left', padding: '0 20px' },
+  dateLabel: { fontSize: '11px', color: '#9ca3af', marginBottom: '4px', display: 'block' },
+  inputDate: { width: '100%', backgroundColor: '#f9fafb', border: 'none', padding: '10px 0', outline: 'none', fontSize: '14px', color: '#374151' },
+  primaryBtn: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', backgroundColor: '#421d4a', color: '#fff', fontWeight: 'bold', padding: '16px', borderRadius: '50px', border: 'none', cursor: 'pointer', boxShadow: '0 10px 15px rgba(66, 29, 74, 0.2)', marginTop: '10px' },
+  footerText: { marginTop: '25px', color: '#9ca3af', fontSize: '14px' },
+  link: { color: '#ec4899', fontWeight: 'bold', cursor: 'pointer', marginLeft: '5px' }
 };
 
 export default Register;
