@@ -1,17 +1,26 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
 // Use environment variable for the API URL, falling back to localhost for dev
-const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+const API_BASE_URL = import.meta.env.VITE_API_URL || "https://sign-bridge-frontend-am22.onrender.com";
 
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
+  // ✅ PRE-CHECK: If user is already logged in, send them home
+  useEffect(() => {
+    const loggedInUser = localStorage.getItem("user");
+    if (loggedInUser) {
+      navigate("/"); // Or "/home" depending on your main route
+    }
+  }, [navigate]);
+
   const handleLogin = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault(); // Handle both form submit and button click
+    
     try {
       // ✅ Updated Axios call with dynamic URL and withCredentials
       const res = await axios.post(
@@ -20,28 +29,34 @@ const Login = () => {
         { withCredentials: true } 
       );
 
-      // Log response to verify structure during testing
       console.log("Login Success:", res.data);
 
-      // ✅ Robust data handling (works if backend sends flat or nested 'user' object)
+      // ✅ Robust data handling
       const userData = res.data.user || res.data;
       const token = res.data.token;
 
+      // ✅ SET LOCAL STORAGE (The "Brain" of the login)
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(userData));
-      localStorage.setItem("userId", userData.username);
+      
+      // Using username or email as the display ID
+      localStorage.setItem("userId", userData.username || userData.email);
 
       alert("Welcome back!");
-      navigate("/");
+      
+      // ✅ TRIGGER REDIRECT
+      navigate("/"); // This moves you from the login page to the home page
+      
     } catch (err) {
       console.error("Login Error:", err);
-      // Detailed alert based on backend response
-      alert(err.response?.data?.message || "Invalid email or password");
+      const errorMsg = err.response?.data?.message || err.response?.data || "Invalid email or password";
+      alert(errorMsg);
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#020603] p-4 font-sans selection:bg-[#8be452]/30">
+      {/* Background Glow */}
       <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#8be452]/5 blur-[120px] rounded-full"></div>
       
       <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl z-10">
@@ -54,7 +69,11 @@ const Login = () => {
           </p>
           
           <div className="flex flex-col gap-4">
-            <button className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(139,228,82,0.4)] hover:scale-[1.02] transition-transform">
+            {/* ✅ Added onClick here so this button also triggers login */}
+            <button 
+              onClick={handleLogin}
+              className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(139,228,82,0.4)] hover:scale-[1.02] transition-transform"
+            >
               SIGN IN
             </button>
             <button 
@@ -76,6 +95,7 @@ const Login = () => {
                 type="email" 
                 placeholder="example@mail.com" 
                 className="w-full bg-[#0a0f0a]/50 border border-white/10 p-5 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+                value={email}
                 onChange={(e) => setEmail(e.target.value)} 
                 required 
               />
@@ -85,6 +105,7 @@ const Login = () => {
                   type="password" 
                   placeholder="••••••••" 
                   className="w-full bg-[#0a0f0a]/50 border border-white/10 p-5 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+                  value={password}
                   onChange={(e) => setPassword(e.target.value)} 
                   required 
                 />
