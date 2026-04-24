@@ -5,20 +5,38 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 
 function App() {
-  // Check if user is logged in
-  const user = JSON.parse(localStorage.getItem("user"));
+  // ✅ This helper function ensures we get the latest status from localStorage
+  const isAuthenticated = () => {
+    return localStorage.getItem("user") !== null;
+  };
 
   return (
     <Router>
       <Routes>
-        {/* If logged in, go to Home. If not, go to Login */}
-        <Route path="/" element={user ? <Home /> : <Navigate to="/login" />} />
-        
+        {/* 🏠 Main Route: Redirects based on Auth status */}
+        <Route 
+          path="/" 
+          element={isAuthenticated() ? <Home /> : <Navigate to="/login" />} 
+        />
+
+        {/* 📝 Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* Only allow Call if logged in */}
-        <Route path="/call/:roomId" element={user ? <Call /> : <Navigate to="/login" />} />
+
+        {/* 🎥 Protected Call Route */}
+        <Route 
+          path="/call/:roomId" 
+          element={isAuthenticated() ? <Call /> : <Navigate to="/login" />} 
+        />
+
+        {/* 🚀 Home Fallback (Optional: in case you navigate to /home specifically) */}
+        <Route 
+          path="/home" 
+          element={isAuthenticated() ? <Home /> : <Navigate to="/login" />} 
+        />
+
+        {/* 404 Catch-all: Send them back to root */}
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>
   );
