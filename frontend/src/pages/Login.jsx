@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
 
-// Use environment variable for the API URL, falling back to localhost for dev
 const API_BASE_URL = import.meta.env.VITE_API_URL || "https://sign-bridge-frontend-am22.onrender.com";
 
 const Login = () => {
@@ -10,128 +9,110 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const navigate = useNavigate();
 
-  // ✅ PRE-CHECK: If user is already logged in, send them home
   useEffect(() => {
     const loggedInUser = localStorage.getItem("user");
-    if (loggedInUser) {
-      navigate("/"); // Or "/home" depending on your main route
-    }
+    if (loggedInUser) navigate("/");
   }, [navigate]);
 
   const handleLogin = async (e) => {
-    if (e) e.preventDefault(); // Handle both form submit and button click
-    
+    if (e) e.preventDefault();
     try {
-      // ✅ Updated Axios call with dynamic URL and withCredentials
-      const res = await axios.post(
-        `${API_BASE_URL}/api/auth/login`, 
-        { email, password },
-        { withCredentials: true } 
+      const res = await axios.post(`${API_BASE_URL}/api/auth/login`, 
+        { email, password }, { withCredentials: true } 
       );
-
-      console.log("Login Success:", res.data);
-
-      // ✅ Robust data handling
       const userData = res.data.user || res.data;
-      const token = res.data.token;
-
-      // ✅ SET LOCAL STORAGE (The "Brain" of the login)
-      localStorage.setItem("token", token);
+      localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(userData));
-      
-      // Using username or email as the display ID
       localStorage.setItem("userId", userData.username || userData.email);
-
-      alert("Welcome back!");
-      
-      // ✅ TRIGGER REDIRECT
-      navigate("/"); // This moves you from the login page to the home page
-      
+      navigate("/");
     } catch (err) {
-      console.error("Login Error:", err);
-      const errorMsg = err.response?.data?.message || err.response?.data || "Invalid email or password";
-      alert(errorMsg);
+      alert(err.response?.data?.message || "Invalid email or password");
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#020603] p-4 font-sans selection:bg-[#8be452]/30">
-      {/* Background Glow */}
-      <div className="fixed top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[#8be452]/5 blur-[120px] rounded-full"></div>
-      
-      <div className="flex flex-col md:flex-row gap-6 w-full max-w-5xl z-10">
+    <div className="min-h-screen w-full flex items-center justify-center bg-white font-sans p-6">
+      <div className="w-full max-w-[420px] flex flex-col items-center">
         
-        {/* LEFT PANEL */}
-        <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-[40px] flex flex-col justify-center shadow-2xl">
-          <h1 className="text-white text-7xl font-bold mb-4 tracking-tight">Hello!</h1>
-          <p className="text-gray-400 text-lg mb-10 max-w-xs leading-relaxed">
-            Sign in to stay connected with signs 🤟
-          </p>
+        {/* TOP SECTION: CIRCULAR RADAR DESIGN */}
+        <div className="relative w-full aspect-square flex items-center justify-center mb-8">
+          {/* Concentric Circles */}
+          <div className="absolute w-[100%] h-[100%] border border-gray-100 rounded-full"></div>
+          <div className="absolute w-[75%] h-[75%] border border-gray-100 rounded-full"></div>
+          <div className="absolute w-[50%] h-[50%] bg-pink-50 rounded-full animate-pulse"></div>
           
-          <div className="flex flex-col gap-4">
-            {/* ✅ Added onClick here so this button also triggers login */}
-            <button 
-              onClick={handleLogin}
-              className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_20px_rgba(139,228,82,0.4)] hover:scale-[1.02] transition-transform"
-            >
-              SIGN IN
-            </button>
-            <button 
-              type="button"
-              onClick={() => navigate("/register")}
-              className="border border-white/20 text-white font-bold py-4 rounded-2xl hover:bg-white/5 transition-colors"
-            >
-              SIGN UP
-            </button>
+          {/* Avatar Points (Simulating "People around you") */}
+          <div className="absolute top-10 left-20 w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden">
+            <img src="https://i.pravatar.cc/150?u=1" alt="user" />
+          </div>
+          <div className="absolute bottom-20 left-4 w-10 h-10 rounded-full border-2 border-white shadow-lg overflow-hidden">
+            <img src="https://i.pravatar.cc/150?u=2" alt="user" />
+          </div>
+          <div className="absolute top-1/2 right-4 w-12 h-12 rounded-full border-2 border-white shadow-lg overflow-hidden">
+            <img src="https://i.pravatar.cc/150?u=3" alt="user" />
+          </div>
+          
+          {/* Center Avatar */}
+          <div className="relative w-20 h-20 rounded-full border-4 border-white shadow-2xl overflow-hidden z-10">
+            <img src="https://i.pravatar.cc/150?u=me" alt="me" />
+          </div>
+          
+          {/* Floating Icons */}
+          <div className="absolute bottom-10 right-20 bg-pink-500 p-2 rounded-full shadow-lg">
+             <div className="w-3 h-3 bg-white rounded-full"></div>
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
-        <div className="flex-1 bg-white/5 backdrop-blur-xl border border-white/10 p-12 rounded-[40px] shadow-2xl relative overflow-hidden">
-          <form onSubmit={handleLogin} className="flex flex-col h-full justify-center">
-            
-            <div className="space-y-4 mb-6">
-              <input 
+        {/* TEXT SECTION */}
+        <div className="text-center mb-10">
+          <h1 className="text-3xl font-extrabold text-gray-900 mb-3 leading-tight">
+            Let's meeting new<br/>people around you
+          </h1>
+        </div>
+
+        {/* FORM SECTION */}
+        <form onSubmit={handleLogin} className="w-full space-y-4">
+          {/* Hidden inputs but kept for state logic, or replace with the sleek buttons in image */}
+          <div className="space-y-3">
+             <input 
                 type="email" 
-                placeholder="example@mail.com" 
-                className="w-full bg-[#0a0f0a]/50 border border-white/10 p-5 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
+                placeholder="Email Address" 
+                className="w-full bg-gray-50 border-none p-4 rounded-3xl text-gray-700 outline-none focus:ring-2 focus:ring-purple-200 transition-all"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)} 
                 required 
               />
-              
-              <div className="relative group">
-                <input 
-                  type="password" 
-                  placeholder="••••••••" 
-                  className="w-full bg-[#0a0f0a]/50 border border-white/10 p-5 rounded-2xl text-white outline-none focus:border-[#8be452]/50 transition-all"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)} 
-                  required 
-                />
-              </div>
-            </div>
+              <input 
+                type="password" 
+                placeholder="Password" 
+                className="w-full bg-gray-50 border-none p-4 rounded-3xl text-gray-700 outline-none focus:ring-2 focus:ring-purple-200 transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)} 
+                required 
+              />
+          </div>
 
-            <button type="submit" className="bg-[#8be452] text-[#05140b] font-bold py-4 rounded-2xl shadow-[0_0_25px_rgba(139,228,82,0.5)] hover:brightness-110 transition-all">
-              SIGN IN
-            </button>
+          <button 
+            type="submit"
+            className="w-full flex items-center justify-center gap-3 bg-[#421d4a] text-white font-bold py-4 rounded-[32px] hover:bg-[#2d1432] transition-all shadow-lg"
+          >
+            <span className="bg-white/20 p-1 rounded-full">📞</span>
+            Login with Account
+          </button>
 
-            <button type="button" className="text-gray-500 text-sm mt-4 hover:text-white transition-colors">
-              Forgot password?
-            </button>
+          <button 
+            type="button"
+            className="w-full flex items-center justify-center gap-3 bg-white border border-gray-100 text-gray-700 font-bold py-4 rounded-[32px] hover:bg-gray-50 transition-all shadow-sm"
+          >
+            <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" alt="G" className="w-5 h-5"/>
+            Login with Google
+          </button>
+        </form>
 
-            <div className="mt-10">
-              <button type="button" className="w-full flex items-center justify-center gap-3 border border-white/10 py-4 rounded-3xl text-white font-medium hover:bg-white/5 transition-all group">
-                <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/smartlock/google.svg" alt="G" className="w-5 h-5 group-hover:scale-110 transition-transform"/>
-                SIGN IN WITH GOOGLE
-              </button>
-            </div>
-
-            <p className="text-gray-500 text-sm mt-8 text-center">
-              Don't have an account? <span className="text-white cursor-pointer font-bold hover:underline" onClick={() => navigate("/register")}>Sign up</span>
-            </p>
-          </form>
-        </div>
+        {/* FOOTER */}
+        <p className="text-gray-400 text-sm mt-8">
+          Don't have an account? <span className="text-pink-500 cursor-pointer font-bold hover:underline" onClick={() => navigate("/register")}>Sign Up</span>
+        </p>
       </div>
     </div>
   );
