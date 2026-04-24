@@ -16,6 +16,7 @@ const VideoCall = ({ roomId }) => {
   const [isAiConnected, setIsAiConnected] = useState(false);
   const [localCaption, setLocalCaption] = useState("");
   const [remoteCaption, setRemoteCaption] = useState("");
+  const [remoteGif, setRemoteGif] = useState(null); // 🔥 For Speech-to-Sign GIF
 
   // 1. Initialize Camera & WebRTC
   useEffect(() => {
@@ -76,6 +77,12 @@ const VideoCall = ({ roomId }) => {
 
     socket.on("receive-caption", (data) => setRemoteCaption(data.text));
     socket.on("receive-sign", (receivedSign) => setRemoteSign(receivedSign));
+    
+    // 🔥 Listen for Speech-to-Sign GIFs
+    socket.on("receive-speech-gif", (data) => {
+      setRemoteGif(data.gifUrl);
+      setTimeout(() => setRemoteGif(null), 3500); 
+    });
 
     return () => {
       socket.off("offer");
@@ -83,10 +90,11 @@ const VideoCall = ({ roomId }) => {
       socket.off("ice-candidate");
       socket.off("receive-caption");
       socket.off("receive-sign");
+      socket.off("receive-speech-gif");
     };
   }, [roomId]);
 
-  // 3. Speech Recognition
+  // 3. Speech Recognition + GIF Trigger
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -96,9 +104,20 @@ const VideoCall = ({ roomId }) => {
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results).map(r => r[0].transcript).join("");
+      const transcript = Array.from(event.results)
+        .map(r => r[0].transcript.toLowerCase())
+        .join("");
+      
       setLocalCaption(transcript);
       socket.emit("send-caption", { text: transcript, roomId });
+
+      // 🔥 GIF Logic
+      const keywords = ["hello", "thanks", "yes", "no", "please"];
+      const found = keywords.find(word => transcript.includes(word));
+      if (found) {
+        const gifUrl = `https://sign-bridge-backend.onrender.com/signs/${found}.gif`;
+        socket.emit("send-speech-gif", { gifUrl, roomId });
+      }
     };
 
     recognition.start();
@@ -126,23 +145,28 @@ const VideoCall = ({ roomId }) => {
     });
   }, []);
 
-  // 5. AI Prediction Loop
+  // 5. AI Prediction Loop (Optimized for Wake-up)
   const sendFrameToBackend = useCallback(async () => {
     if (!localVideo.current || localVideo.current.readyState !== 4) return;
     
     const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = 400;
-    captureCanvas.height = 300;
+    captureCanvas.width = 320; // ⚡ Reduced resolution
+    captureCanvas.height = 240;
     const ctx = captureCanvas.getContext("2d");
-    ctx.drawImage(localVideo.current, 0, 0, 400, 300);
-    const image = captureCanvas.toDataURL("image/jpeg", 0.5);
+    ctx.drawImage(localVideo.current, 0, 0, 320, 240);
+    const image = captureCanvas.toDataURL("image/jpeg", 0.4); // ⚡ Reduced quality
 
     try {
       const res = await fetch("https://sign-bridge-backend.onrender.com/predict", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
         body: JSON.stringify({ image }),
       });
+
+      if (!res.ok) throw new Error();
 
       const data = await res.json();
       setIsAiConnected(true);
@@ -158,18 +182,19 @@ const VideoCall = ({ roomId }) => {
       }
     } catch {
       setIsAiConnected(false);
-      console.log("Waiting for AI backend...");
+      console.log("Wake-up request sent to Render...");
     }
   }, [roomId, drawLandmarks]);
 
   useEffect(() => {
-    const interval = setInterval(sendFrameToBackend, 1000);
+    const interval = setInterval(sendFrameToBackend, 1200); // ⚡ Slightly longer interval
     return () => clearInterval(interval);
   }, [sendFrameToBackend]);
 
   return (
     <div style={styles.container}>
       <div style={styles.videoGrid}>
+        {/* LOCAL */}
         <div style={styles.videoWrapper}>
           <div style={{...styles.badge, background: isAiConnected ? "#10b981" : "#ef4444"}}>
             {isAiConnected ? "AI ACTIVE" : "AI OFFLINE (Wake-up Required)"}
@@ -185,9 +210,18 @@ const VideoCall = ({ roomId }) => {
           </div>
         </div>
 
+        {/* REMOTE */}
         <div style={styles.videoWrapper}>
           <div style={styles.badgeRed}>REMOTE</div>
           <video ref={remoteVideo} autoPlay playsInline style={styles.remoteVideo} />
+          
+          {/* 🔥 GIF OVERLAY */}
+          {remoteGif && (
+            <div style={styles.gifOverlay}>
+              <img src={remoteGif} alt="sign-gif" style={styles.signGif} />
+            </div>
+          )}
+
           <div style={styles.captionOverlay}>{remoteCaption || "No remote captions"}</div>
           <div style={styles.signOverlay}>
             <div style={styles.signInfo}>
@@ -208,7 +242,6 @@ const VideoCall = ({ roomId }) => {
   );
 };
 
-// RESTORED STYLES OBJECT
 const styles = {
   container: { padding: "20px", background: "#0f172a", borderRadius: "20px" },
   videoGrid: { display: "flex", justifyContent: "center", gap: "25px", flexWrap: "wrap" },
@@ -223,6 +256,8 @@ const styles = {
   signInfo: { background: "rgba(15, 23, 42, 0.9)", padding: "10px", borderRadius: "15px", textAlign: "center", display: "flex", flexDirection: "column" },
   signLabel: { color: "#fff", fontWeight: "bold", fontSize: "16px" },
   confText: { color: "#10b981", fontSize: "12px", marginTop: "4px" },
+  gifOverlay: { position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)", zIndex: 30, background: "rgba(0,0,0,0.5)", padding: "10px", borderRadius: "15px" },
+  signGif: { width: "120px", height: "120px", borderRadius: "10px", border: "2px solid #6366f1" },
   callBtn: { marginTop: "20px", padding: "12px 24px", background: "#6366f1", color: "white", borderRadius: "10px", cursor: "pointer", fontWeight: "bold", border: "none" },
 };
 
