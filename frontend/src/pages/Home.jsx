@@ -15,12 +15,12 @@ const Home = () => {
   const [incomingCall, setIncomingCall] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  // Example "Recent" list
-  const recentCalls = [
-    { id: "Alfredo", name: "Alfredo Calzoni", img: "https://i.pravatar.cc/150?u=alfredo" },
-    { id: "Clara", name: "Clara Hazel", img: "https://i.pravatar.cc/150?u=clara" },
-    { id: "Brandon", name: "Brandon Aminoff", img: "https://i.pravatar.cc/150?u=brandon" },
-    { id: "Amina", name: "Amina Mina", img: "https://i.pravatar.cc/150?u=amina" },
+  // 🕒 CALL HISTORY (Simulated - You can later save this to localStorage or DB)
+  const callHistory = [
+    { id: "Alfredo", name: "Alfredo Calzoni", img: "https://i.pravatar.cc/150?u=alfredo", time: "2 hours ago" },
+    { id: "Clara", name: "Clara Hazel", img: "https://i.pravatar.cc/150?u=clara", time: "Yesterday" },
+    { id: "Brandon", name: "Brandon Aminoff", img: "https://i.pravatar.cc/150?u=brandon", time: "April 20" },
+    { id: "Amina", name: "Amina Mina", img: "https://i.pravatar.cc/150?u=amina", time: "April 18" },
   ];
 
   useEffect(() => {
@@ -66,84 +66,83 @@ const Home = () => {
   };
 
   return (
-    <div style={s.screen}>
-      <div style={s.appContainer}>
-        {/* PURPLE TOP SECTION */}
-        <div style={s.topPanel}>
-          <div style={s.header}>
-            <div style={s.backBtn}>Hi, {fullName?.split(' ')[0]}</div>
-            <h1 style={s.pageTitle}>Messages</h1>
-            <button onClick={handleLogout} style={s.logoutBtn}>Logout</button>
-          </div>
-
-          <div style={s.recentSection}>
-            <p style={s.sectionLabel}>Recent Matches</p>
-            <div style={s.recentRow}>
-               {recentCalls.map((item) => (
-                 <div key={item.id} style={s.recentAvatarWrapper} onClick={() => callUser(item.id)}>
-                   <img src={item.img} style={s.recentAvatar} alt={item.name} />
-                   <div style={s.activeDot}></div>
-                 </div>
-               ))}
+    <div style={s.pageWrapper}>
+      <div style={s.mainDashboard}>
+        
+        {/* TOP BRANDING / HEADER */}
+        <div style={s.glassHeader}>
+          <div style={s.headerContent}>
+            <div>
+              <h1 style={s.logoText}>🤟 SignBridge</h1>
+              <p style={s.welcomeText}>Welcome back, <span style={{color: '#ec4899'}}>{fullName}</span></p>
             </div>
+            <button onClick={handleLogout} style={s.logoutBtn}>Logout</button>
           </div>
         </div>
 
-        {/* WHITE BOTTOM LIST SECTION */}
-        <div style={s.listPanel}>
-          <div style={s.handleBar}></div>
-          
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '25px' }}>
-            <div style={s.inputContainer}>
+        {/* CONTROLS SECTION (CALL & JOIN) */}
+        <div style={s.actionGrid}>
+          <div style={s.inputWrapper}>
+            <label style={s.inputLabel}>Start Direct Call</label>
+            <div style={s.row}>
               <input
-                style={s.searchBar}
-                placeholder="Call by User ID..."
+                style={s.webInput}
+                placeholder="Enter User ID..."
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
               />
-              <button onClick={() => callUser()} style={s.fabCall}>📞</button>
+              <button onClick={() => callUser()} style={s.actionBtn}>Call 📞</button>
             </div>
+          </div>
 
-            <div style={s.inputContainer}>
+          <div style={s.inputWrapper}>
+            <label style={s.inputLabel}>Join Private Room</label>
+            <div style={s.row}>
               <input
-                style={{ ...s.searchBar, backgroundColor: '#f3f4f6' }}
-                placeholder="Join Room Name..."
+                style={{ ...s.webInput, backgroundColor: '#fdf2f8' }}
+                placeholder="Room Name..."
                 value={roomInput}
                 onChange={(e) => setRoomInput(e.target.value)}
               />
               <button 
                 onClick={() => roomInput && navigate(`/call/${roomInput}`)} 
-                style={{ ...s.fabCall, backgroundColor: '#10b981' }}
+                style={{ ...s.actionBtn, backgroundColor: '#10b981' }}
               >
-                🔗
+                Join 🔗
               </button>
             </div>
           </div>
+        </div>
 
-          <div style={s.callList}>
-            {recentCalls.map((item) => (
-              <div key={item.id} style={s.callItem} onClick={() => callUser(item.id)}>
-                <img src={item.img} style={s.itemAvatar} alt="" />
-                <div style={s.itemInfo}>
-                  <div style={s.itemName}>{item.name}</div>
-                  <div style={s.itemSub}>Click to start call</div>
+        {/* CALL HISTORY SECTION */}
+        <div style={s.historySection}>
+          <h3 style={s.sectionTitle}>Call History</h3>
+          <div style={s.historyList}>
+            {callHistory.map((item) => (
+              <div key={item.id} style={s.historyItem} onClick={() => callUser(item.id)}>
+                <div style={s.itemLeft}>
+                  <img src={item.img} style={s.avatar} alt="" />
+                  <div>
+                    <div style={s.nameText}>{item.name}</div>
+                    <div style={s.subText}>Video Call • {item.time}</div>
+                  </div>
                 </div>
-                <div style={s.statusText}>Active</div>
+                <div style={s.callAgainIcon}>📞</div>
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* INCOMING CALL MODAL */}
+      {/* INCOMING CALL OVERLAY */}
       {incomingCall && (
         <div style={s.overlay}>
-          <div style={s.modal}>
+          <div style={s.callModal}>
             <div style={s.modalAvatar}>
-              <img src={`https://i.pravatar.cc/150?u=${incomingCall.from}`} style={{width:'100%'}} alt=""/>
+               <img src={`https://i.pravatar.cc/150?u=${incomingCall.from}`} style={{width: '100%'}} alt=""/>
             </div>
-            <h2 style={{marginTop:'20px'}}>Incoming Call</h2>
-            <p style={{color:'#6b7280'}}>{incomingCall.from} is calling...</p>
+            <h2 style={{margin: '20px 0'}}>Incoming Call</h2>
+            <p style={{color: '#6b7280', marginBottom: '30px'}}>{incomingCall.from} is calling...</p>
             <div style={s.modalActions}>
               <button style={s.acceptBtn} onClick={() => navigate(`/call/${incomingCall.roomId}`)}>Accept</button>
               <button style={s.rejectBtn} onClick={() => setIncomingCall(null)}>Decline</button>
@@ -156,43 +155,38 @@ const Home = () => {
 };
 
 const s = {
-  screen: { height: '100vh', width: '100%', backgroundColor: '#fdf2f8', display: 'flex', justifyContent: 'center', fontFamily: 'sans-serif', overflow: 'hidden' },
-  appContainer: { width: '100%', maxWidth: '420px', backgroundColor: '#421d4a', display: 'flex', flexDirection: 'column', height: '100vh', position: 'relative' },
+  pageWrapper: { minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', fontFamily: '"Inter", sans-serif' },
+  mainDashboard: { width: '100%', maxWidth: '900px', backgroundColor: 'white', borderRadius: '30px', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', padding: '40px', overflow: 'hidden' },
   
-  topPanel: { padding: '30px 20px 20px 20px', color: 'white' },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' },
-  backBtn: { fontSize: '13px', opacity: 0.8 },
-  pageTitle: { fontSize: '22px', fontWeight: 'bold' },
-  logoutBtn: { background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', padding: '6px 12px', borderRadius: '15px', cursor: 'pointer', fontSize: '11px' },
-  
-  recentSection: { marginTop: '5px' },
-  sectionLabel: { fontSize: '12px', marginBottom: '12px', opacity: 0.9 },
-  recentRow: { display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '5px' },
-  recentAvatarWrapper: { position: 'relative', flexShrink: 0, cursor: 'pointer' },
-  recentAvatar: { width: '58px', height: '58px', borderRadius: '16px', border: '2px solid rgba(255,255,255,0.2)', objectFit: 'cover' },
-  activeDot: { position: 'absolute', top: '-2px', right: '-2px', width: '10px', height: '10px', backgroundColor: '#10b981', borderRadius: '50%', border: '2px solid #421d4a' },
+  glassHeader: { borderBottom: '1px solid #f1f5f9', paddingBottom: '30px', marginBottom: '40px' },
+  headerContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
+  logoText: { fontSize: '28px', fontWeight: '900', color: '#421d4a', letterSpacing: '-1px' },
+  welcomeText: { color: '#64748b', fontSize: '14px', marginTop: '5px' },
+  logoutBtn: { backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' },
 
-  listPanel: { flex: 1, backgroundColor: 'white', borderTopLeftRadius: '35px', borderTopRightRadius: '35px', padding: '20px', display: 'flex', flexDirection: 'column', boxShadow: '0 -10px 20px rgba(0,0,0,0.1)', overflowY: 'hidden' },
-  handleBar: { width: '35px', height: '4px', backgroundColor: '#e5e7eb', borderRadius: '10px', alignSelf: 'center', marginBottom: '20px' },
-  
-  inputContainer: { display: 'flex', gap: '8px' },
-  searchBar: { flex: 1, backgroundColor: '#f9fafb', border: 'none', padding: '12px 18px', borderRadius: '18px', outline: 'none', fontSize: '13px' },
-  fabCall: { backgroundColor: '#421d4a', border: 'none', color: 'white', width: '45px', height: '45px', borderRadius: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px', marginBottom: '50px' },
+  inputWrapper: { display: 'flex', flexDirection: 'column', gap: '10px' },
+  inputLabel: { fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginLeft: '5px' },
+  row: { display: 'flex', gap: '10px' },
+  webInput: { flex: 1, backgroundColor: '#f1f5f9', border: 'none', padding: '15px 20px', borderRadius: '15px', outline: 'none', fontSize: '15px' },
+  actionBtn: { backgroundColor: '#421d4a', color: 'white', border: 'none', padding: '0 25px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' },
 
-  callList: { flex: 1, overflowY: 'auto', paddingBottom: '20px' },
-  callItem: { display: 'flex', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #f3f4f6', cursor: 'pointer' },
-  itemAvatar: { width: '50px', height: '50px', borderRadius: '14px', marginRight: '12px', objectFit: 'cover' },
-  itemInfo: { flex: 1 },
-  itemName: { fontWeight: 'bold', color: '#111827', fontSize: '15px' },
-  itemSub: { fontSize: '12px', color: '#9ca3af' },
-  statusText: { fontSize: '11px', color: '#ec4899', fontWeight: 'bold' },
+  historySection: { textAlign: 'left' },
+  sectionTitle: { fontSize: '20px', fontWeight: 'bold', color: '#1e293b', marginBottom: '20px' },
+  historyList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' },
+  historyItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', borderRadius: '20px', border: '1px solid #f1f5f9', cursor: 'pointer', transition: '0.2s hover', backgroundColor: '#fff' },
+  itemLeft: { display: 'flex', alignItems: 'center', gap: '15px' },
+  avatar: { width: '50px', height: '50px', borderRadius: '15px', objectFit: 'cover' },
+  nameText: { fontWeight: 'bold', color: '#1e293b' },
+  subText: { fontSize: '12px', color: '#94a3b8' },
+  callAgainIcon: { color: '#ec4899', opacity: 0.5 },
 
-  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.85)', zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' },
-  modal: { backgroundColor: 'white', width: '90%', maxWidth: '300px', borderRadius: '35px', padding: '30px 20px', textAlign: 'center' },
-  modalAvatar: { width: '80px', height: '80px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto', border: '4px solid #f3f4f6' },
-  modalActions: { display: 'flex', gap: '10px', marginTop: '25px' },
-  acceptBtn: { flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '14px', borderRadius: '18px', fontWeight: 'bold', cursor: 'pointer' },
-  rejectBtn: { flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '14px', borderRadius: '18px', fontWeight: 'bold', cursor: 'pointer' }
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  callModal: { backgroundColor: 'white', padding: '40px', borderRadius: '40px', width: '90%', maxWidth: '400px', textAlign: 'center' },
+  modalAvatar: { width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto', border: '6px solid #f1f5f9' },
+  modalActions: { display: 'flex', gap: '15px' },
+  acceptBtn: { flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '16px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' },
+  rejectBtn: { flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '16px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }
 };
 
 export default Home;
