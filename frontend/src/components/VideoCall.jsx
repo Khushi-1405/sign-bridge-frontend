@@ -8,8 +8,9 @@ const VideoCall = ({ roomId }) => {
   const peerConnection = useRef(null);
   const lastSignRef = useRef("");
   const streamRef = useRef(null);
-  const iceQueue = useRef([]); // 🔥 New: Queue for early ICE candidates
+  const iceQueue = useRef([]);
 
+  // States
   const [sign, setSign] = useState("");
   const [remoteSign, setRemoteSign] = useState("");
   const [confidence, setConfidence] = useState(0);
@@ -18,7 +19,36 @@ const VideoCall = ({ roomId }) => {
   const [remoteCaption, setRemoteCaption] = useState("");
   const [remoteGif, setRemoteGif] = useState(null);
 
-  // 1. WebRTC Init
+  // 🔥 UPDATED: BULLETPROOF WAKE-UP LOGIC
+  // This version fixes the 'err' linting issue and cleans up the interval properly.
+  useEffect(() => {
+    let waker;
+
+    const wakeUpAI = async () => {
+      try {
+        const response = await fetch("https://sign-bridge-backend.onrender.com/");
+        if (response.ok) {
+          console.log("✅ AI Backend is awake!");
+          setIsAiConnected(true);
+          if (waker) clearInterval(waker);
+        }
+      } catch {
+        // 'err' removed to satisfy ESLint
+        console.log("⏳ AI Backend is sleeping... retrying.");
+      }
+    };
+
+    if (!isAiConnected) {
+      wakeUpAI();
+      waker = setInterval(wakeUpAI, 3000);
+    }
+
+    return () => {
+      if (waker) clearInterval(waker);
+    };
+  }, [isAiConnected]);
+
+  // 1. Initialize Camera & WebRTC
   useEffect(() => {
     const initStream = async () => {
       try {
@@ -59,7 +89,7 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 2. Optimized Signaling with ICE Queuing
+  // 2. Signaling Logic with ICE Queuing (Prevents Handshake Errors)
   useEffect(() => {
     const processQueuedCandidates = async () => {
       while (iceQueue.current.length > 0) {
@@ -77,7 +107,7 @@ const VideoCall = ({ roomId }) => {
         const answer = await peerConnection.current.createAnswer();
         await peerConnection.current.setLocalDescription(answer);
         socket.emit("answer", answer, roomId);
-        await processQueuedCandidates(); // 🔥 Process queue after setting description
+        await processQueuedCandidates();
       } catch (err) { console.error("Offer Error:", err); }
     });
 
@@ -85,7 +115,7 @@ const VideoCall = ({ roomId }) => {
       if (!peerConnection.current || peerConnection.current.signalingState !== "have-local-offer") return;
       try {
         await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
-        await processQueuedCandidates(); // 🔥 Process queue after setting description
+        await processQueuedCandidates();
       } catch (err) { console.error("Answer Error:", err); }
     });
 
@@ -95,7 +125,6 @@ const VideoCall = ({ roomId }) => {
           await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
         } catch (e) { console.warn("ICE Error:", e); }
       } else {
-        // 🔥 Queue the candidate if remote description isn't ready
         iceQueue.current.push(candidate);
       }
     });
@@ -113,7 +142,7 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 3. Speech Recognition
+  // 3. Browser-Based Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
@@ -162,7 +191,6 @@ const VideoCall = ({ roomId }) => {
     const image = captureCanvas.toDataURL("image/jpeg", 0.3);
 
     try {
-      // ✅ ABSOLUTE URL to fix 404
       const res = await fetch("https://sign-bridge-backend.onrender.com/predict", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -179,7 +207,9 @@ const VideoCall = ({ roomId }) => {
           socket.emit("send-sign", data.sign, roomId);
         }
       }
-    } catch { setIsAiConnected(false); }
+    } catch { 
+        // Silent catch during wake-up to prevent console spam
+    }
   }, [roomId, drawLandmarks]);
 
   useEffect(() => {
@@ -236,7 +266,6 @@ const VideoCall = ({ roomId }) => {
   );
 };
 
-// ... (Use the same styles object from previous turn)
 const styles = {
   container: { padding: "20px", background: "#0f172a", borderRadius: "20px", minHeight: "80vh" },
   videoGrid: { display: "flex", justifyContent: "center", gap: "25px", flexWrap: "wrap" },
