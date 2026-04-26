@@ -15,9 +15,9 @@ const Home = () => {
   const [incomingCall, setIncomingCall] = useState(null);
   const [isRegistered, setIsRegistered] = useState(false);
 
-  // 🕒 CALL HISTORY (Simulated - You can later save this to localStorage or DB)
+  // 🕒 CALL HISTORY
   const callHistory = [
-    { id: "Alfredo", name: "Alfredo Calzoni", img: "https://i.pravatar.cc/150?u=alfredo", time: "2 hours ago" },
+    { id: "Priyanshu", name: "Priyanshu S.", img: "https://i.pravatar.cc/150?u=alfredo", time: "2 hours ago" },
     { id: "Clara", name: "Clara Hazel", img: "https://i.pravatar.cc/150?u=clara", time: "Yesterday" },
     { id: "Brandon", name: "Brandon Aminoff", img: "https://i.pravatar.cc/150?u=brandon", time: "April 20" },
     { id: "Amina", name: "Amina Mina", img: "https://i.pravatar.cc/150?u=amina", time: "April 18" },
@@ -67,22 +67,27 @@ const Home = () => {
 
   return (
     <div style={s.pageWrapper}>
+      {/* BACKGROUND IMAGE OVERLAY */}
+      <div style={s.bgOverlay}></div>
+      
       <div style={s.mainDashboard}>
         
-        {/* TOP BRANDING / HEADER */}
+        {/* HEADER SECTION */}
         <div style={s.glassHeader}>
           <div style={s.headerContent}>
             <div>
               <h1 style={s.logoText}>🤟 SignBridge</h1>
-              <p style={s.welcomeText}>Welcome back, <span style={{color: '#ec4899'}}>{fullName}</span></p>
+              <p style={s.welcomeText}>Welcome back, <span style={s.userNameHighlight}>{fullName}</span></p>
             </div>
-            <button onClick={handleLogout} style={s.logoutBtn}>Logout</button>
+            <button onClick={handleLogout} style={s.logoutBtn}>
+              Logout <span style={{marginLeft: '5px'}}>⏻</span>
+            </button>
           </div>
         </div>
 
-        {/* CONTROLS SECTION (CALL & JOIN) */}
+        {/* ACTIONS SECTION */}
         <div style={s.actionGrid}>
-          <div style={s.inputWrapper}>
+          <div style={s.glassCard}>
             <label style={s.inputLabel}>Start Direct Call</label>
             <div style={s.row}>
               <input
@@ -91,22 +96,22 @@ const Home = () => {
                 value={targetId}
                 onChange={(e) => setTargetId(e.target.value)}
               />
-              <button onClick={() => callUser()} style={s.actionBtn}>Call 📞</button>
+              <button onClick={() => callUser()} style={s.callBtn}>Call 📞</button>
             </div>
           </div>
 
-          <div style={s.inputWrapper}>
+          <div style={s.glassCard}>
             <label style={s.inputLabel}>Join Private Room</label>
             <div style={s.row}>
               <input
-                style={{ ...s.webInput, backgroundColor: '#fdf2f8' }}
+                style={s.webInput}
                 placeholder="Room Name..."
                 value={roomInput}
                 onChange={(e) => setRoomInput(e.target.value)}
               />
               <button 
                 onClick={() => roomInput && navigate(`/call/${roomInput}`)} 
-                style={{ ...s.actionBtn, backgroundColor: '#10b981' }}
+                style={s.joinBtn}
               >
                 Join 🔗
               </button>
@@ -114,9 +119,9 @@ const Home = () => {
           </div>
         </div>
 
-        {/* CALL HISTORY SECTION */}
+        {/* HISTORY SECTION */}
         <div style={s.historySection}>
-          <h3 style={s.sectionTitle}>Call History</h3>
+          <h3 style={s.sectionTitle}>Recent Connections</h3>
           <div style={s.historyList}>
             {callHistory.map((item) => (
               <div key={item.id} style={s.historyItem} onClick={() => callUser(item.id)}>
@@ -141,8 +146,8 @@ const Home = () => {
             <div style={s.modalAvatar}>
                <img src={`https://i.pravatar.cc/150?u=${incomingCall.from}`} style={{width: '100%'}} alt=""/>
             </div>
-            <h2 style={{margin: '20px 0'}}>Incoming Call</h2>
-            <p style={{color: '#6b7280', marginBottom: '30px'}}>{incomingCall.from} is calling...</p>
+            <h2 style={{margin: '20px 0', color: '#1e293b'}}>Incoming Call</h2>
+            <p style={{color: '#64748b', marginBottom: '30px'}}>{incomingCall.from} is inviting you to connect.</p>
             <div style={s.modalActions}>
               <button style={s.acceptBtn} onClick={() => navigate(`/call/${incomingCall.roomId}`)}>Accept</button>
               <button style={s.rejectBtn} onClick={() => setIncomingCall(null)}>Decline</button>
@@ -155,38 +160,69 @@ const Home = () => {
 };
 
 const s = {
-  pageWrapper: { minHeight: '100vh', width: '100%', backgroundColor: '#f8fafc', display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '20px', fontFamily: '"Inter", sans-serif' },
-  mainDashboard: { width: '100%', maxWidth: '900px', backgroundColor: 'white', borderRadius: '30px', boxShadow: '0 20px 50px rgba(0,0,0,0.05)', padding: '40px', overflow: 'hidden' },
+  pageWrapper: { 
+    minHeight: '100vh', 
+    width: '100%', 
+    backgroundImage: 'url("https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?auto=format&fit=crop&q=80&w=2070")', // Professional Bridge Background
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    padding: '20px', 
+    fontFamily: '"Plus Jakarta Sans", "Inter", sans-serif',
+    position: 'relative'
+  },
+  bgOverlay: {
+    position: 'absolute',
+    inset: 0,
+    backgroundColor: 'rgba(15, 23, 42, 0.45)', // Darker tint to make the white glass pop
+    backdropFilter: 'blur(3px)',
+    zIndex: 1
+  },
+  mainDashboard: { 
+    width: '100%', 
+    maxWidth: '950px', 
+    backgroundColor: 'rgba(255, 255, 255, 0.85)', // Glass effect
+    backdropFilter: 'blur(15px)',
+    borderRadius: '32px', 
+    boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.5)', 
+    padding: '40px', 
+    zIndex: 2,
+    border: '1px solid rgba(255, 255, 255, 0.3)'
+  },
   
-  glassHeader: { borderBottom: '1px solid #f1f5f9', paddingBottom: '30px', marginBottom: '40px' },
+  glassHeader: { borderBottom: '1px solid rgba(0,0,0,0.05)', paddingBottom: '25px', marginBottom: '40px' },
   headerContent: { display: 'flex', justifyContent: 'space-between', alignItems: 'center' },
-  logoText: { fontSize: '28px', fontWeight: '900', color: '#421d4a', letterSpacing: '-1px' },
-  welcomeText: { color: '#64748b', fontSize: '14px', marginTop: '5px' },
-  logoutBtn: { backgroundColor: '#fee2e2', color: '#ef4444', border: 'none', padding: '10px 20px', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s' },
+  logoText: { fontSize: '32px', fontWeight: '800', color: '#1e293b', letterSpacing: '-1.5px', margin: 0 },
+  welcomeText: { color: '#475569', fontSize: '15px', marginTop: '4px' },
+  userNameHighlight: { color: '#7c3aed', fontWeight: 'bold' },
+  logoutBtn: { backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.2)', padding: '10px 22px', borderRadius: '14px', fontWeight: '600', cursor: 'pointer', transition: '0.3s' },
 
-  actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px', marginBottom: '50px' },
-  inputWrapper: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  inputLabel: { fontSize: '12px', fontWeight: 'bold', color: '#94a3b8', textTransform: 'uppercase', marginLeft: '5px' },
-  row: { display: 'flex', gap: '10px' },
-  webInput: { flex: 1, backgroundColor: '#f1f5f9', border: 'none', padding: '15px 20px', borderRadius: '15px', outline: 'none', fontSize: '15px' },
-  actionBtn: { backgroundColor: '#421d4a', color: 'white', border: 'none', padding: '0 25px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' },
+  actionGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '45px' },
+  glassCard: { backgroundColor: 'rgba(255, 255, 255, 0.5)', padding: '24px', borderRadius: '24px', border: '1px solid rgba(255,255,255,0.5)', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
+  inputLabel: { fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '12px', display: 'block' },
+  row: { display: 'flex', gap: '12px' },
+  webInput: { flex: 1, backgroundColor: 'white', border: '1px solid #e2e8f0', padding: '14px 18px', borderRadius: '14px', outline: 'none', fontSize: '15px', transition: '0.2s', boxShadow: 'inset 0 2px 4px rgba(0,0,0,0.02)' },
+  callBtn: { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: 'white', border: 'none', padding: '0 25px', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(124, 58, 237, 0.3)' },
+  joinBtn: { background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)', color: 'white', border: 'none', padding: '0 25px', borderRadius: '14px', fontWeight: '700', cursor: 'pointer', boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)' },
 
   historySection: { textAlign: 'left' },
-  sectionTitle: { fontSize: '20px', fontWeight: 'bold', color: '#1e293b', marginBottom: '20px' },
-  historyList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' },
-  historyItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '15px', borderRadius: '20px', border: '1px solid #f1f5f9', cursor: 'pointer', transition: '0.2s hover', backgroundColor: '#fff' },
-  itemLeft: { display: 'flex', alignItems: 'center', gap: '15px' },
-  avatar: { width: '50px', height: '50px', borderRadius: '15px', objectFit: 'cover' },
-  nameText: { fontWeight: 'bold', color: '#1e293b' },
-  subText: { fontSize: '12px', color: '#94a3b8' },
-  callAgainIcon: { color: '#ec4899', opacity: 0.5 },
+  sectionTitle: { fontSize: '22px', fontWeight: '700', color: '#1e293b', marginBottom: '24px' },
+  historyList: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' },
+  historyItem: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px', borderRadius: '20px', backgroundColor: 'white', border: '1px solid #f1f5f9', cursor: 'pointer', transition: 'all 0.2s ease', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' },
+  itemLeft: { display: 'flex', alignItems: 'center', gap: '16px' },
+  avatar: { width: '52px', height: '52px', borderRadius: '16px', objectFit: 'cover' },
+  nameText: { fontWeight: '700', color: '#1e293b', fontSize: '16px' },
+  subText: { fontSize: '13px', color: '#64748b', marginTop: '2px' },
+  callAgainIcon: { color: '#7c3aed', backgroundColor: '#f5f3ff', padding: '10px', borderRadius: '12px', fontSize: '14px' },
 
-  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.8)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
-  callModal: { backgroundColor: 'white', padding: '40px', borderRadius: '40px', width: '90%', maxWidth: '400px', textAlign: 'center' },
-  modalAvatar: { width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto', border: '6px solid #f1f5f9' },
-  modalActions: { display: 'flex', gap: '15px' },
-  acceptBtn: { flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '16px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' },
-  rejectBtn: { flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '16px', borderRadius: '15px', fontWeight: 'bold', cursor: 'pointer' }
+  overlay: { position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.9)', backdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' },
+  callModal: { backgroundColor: 'white', padding: '45px', borderRadius: '40px', width: '90%', maxWidth: '420px', textAlign: 'center', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)' },
+  modalAvatar: { width: '130px', height: '130px', borderRadius: '50%', overflow: 'hidden', margin: '0 auto', border: '5px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' },
+  modalActions: { display: 'flex', gap: '16px' },
+  acceptBtn: { flex: 1, backgroundColor: '#10b981', color: 'white', border: 'none', padding: '18px', borderRadius: '18px', fontWeight: '700', cursor: 'pointer', fontSize: '16px' },
+  rejectBtn: { flex: 1, backgroundColor: '#ef4444', color: 'white', border: 'none', padding: '18px', borderRadius: '18px', fontWeight: '700', cursor: 'pointer', fontSize: '16px' }
 };
 
 export default Home;
