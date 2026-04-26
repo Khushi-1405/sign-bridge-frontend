@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import socket from "../socket";
 
 // 🌍 CONFIGURATION
-const AI_BACKEND_URL = "https://sign-bridge-backend.onrender.com";
+const AI_BACKEND_URL = "web-production-81284.up.railway.app";
 
 const VideoCall = ({ roomId }) => {
   const localVideo = useRef(null);
