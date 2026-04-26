@@ -109,11 +109,7 @@ async def predict(request: Request):
 # 🔥 FIX 4: Optimized Uvicorn settings for Render
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=port, 
-        limit_concurrency=10, 
-        timeout_keep_alive=30
-    )
+    import os
+    # Render provides the PORT env var; default to 10000 if not found
+    port = int(os.environ.get("PORT", 10000)) 
+    uvicorn.run(app, host="0.0.0.0", port=port)
