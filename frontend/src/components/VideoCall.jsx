@@ -8,8 +8,8 @@ const VideoCall = ({ roomId }) => {
   const peerConnection = useRef(null);
   const lastSignRef = useRef("");
   const streamRef = useRef(null);
+  const iceQueue = useRef([]); // 🔥 New: Queue for early ICE candidates
 
-  // States
   const [sign, setSign] = useState("");
   const [remoteSign, setRemoteSign] = useState("");
   const [confidence, setConfidence] = useState(0);
@@ -18,7 +18,7 @@ const VideoCall = ({ roomId }) => {
   const [remoteCaption, setRemoteCaption] = useState("");
   const [remoteGif, setRemoteGif] = useState(null);
 
-  // 1. Unified Camera & WebRTC Initialization
+  // 1. WebRTC Init
   useEffect(() => {
     const initStream = async () => {
       try {
@@ -59,43 +59,45 @@ const VideoCall = ({ roomId }) => {
     };
   }, [roomId]);
 
-  // 2. Optimized Socket Listeners with Signaling State Checks
+  // 2. Optimized Signaling with ICE Queuing
   useEffect(() => {
+    const processQueuedCandidates = async () => {
+      while (iceQueue.current.length > 0) {
+        const candidate = iceQueue.current.shift();
+        try {
+          await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
+        } catch (e) { console.warn("Queued ICE Error:", e); }
+      }
+    };
+
     socket.on("offer", async (offer) => {
-      if (!peerConnection.current) return;
-
-      // 🔥 FIX: Only process offer if stable to avoid collisions
-      if (peerConnection.current.signalingState !== "stable") return;
-
+      if (!peerConnection.current || peerConnection.current.signalingState !== "stable") return;
       try {
         await peerConnection.current.setRemoteDescription(new RTCSessionDescription(offer));
         const answer = await peerConnection.current.createAnswer();
         await peerConnection.current.setLocalDescription(answer);
         socket.emit("answer", answer, roomId);
-      } catch (err) {
-        console.error("Offer Error:", err);
-      }
+        await processQueuedCandidates(); // 🔥 Process queue after setting description
+      } catch (err) { console.error("Offer Error:", err); }
     });
 
     socket.on("answer", async (answer) => {
-      if (!peerConnection.current) return;
-
-      // 🔥 FIX: Only process answer if we actually sent an offer
-      if (peerConnection.current.signalingState !== "have-local-offer") return;
-
+      if (!peerConnection.current || peerConnection.current.signalingState !== "have-local-offer") return;
       try {
         await peerConnection.current.setRemoteDescription(new RTCSessionDescription(answer));
-      } catch (err) {
-        console.error("Answer Error:", err);
-      }
+        await processQueuedCandidates(); // 🔥 Process queue after setting description
+      } catch (err) { console.error("Answer Error:", err); }
     });
 
     socket.on("ice-candidate", async (candidate) => {
-      try {
-        if (peerConnection.current && candidate) {
+      if (peerConnection.current?.remoteDescription) {
+        try {
           await peerConnection.current.addIceCandidate(new RTCIceCandidate(candidate));
-        }
-      } catch (e) { console.warn("ICE Candidate Error:", e); }
+        } catch (e) { console.warn("ICE Error:", e); }
+      } else {
+        // 🔥 Queue the candidate if remote description isn't ready
+        iceQueue.current.push(candidate);
+      }
     });
 
     socket.on("receive-caption", (data) => setRemoteCaption(data.text));
@@ -106,46 +108,34 @@ const VideoCall = ({ roomId }) => {
     });
 
     return () => {
-      socket.off("offer");
-      socket.off("answer");
-      socket.off("ice-candidate");
-      socket.off("receive-caption");
-      socket.off("receive-sign");
-      socket.off("receive-speech-gif");
+      socket.off("offer"); socket.off("answer"); socket.off("ice-candidate");
+      socket.off("receive-caption"); socket.off("receive-sign"); socket.off("receive-speech-gif");
     };
   }, [roomId]);
 
-  // 3. Browser-Based Speech Recognition
+  // 3. Speech Recognition
   useEffect(() => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (!SpeechRecognition) return;
-
     const recognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
-
     recognition.onresult = (event) => {
-      const transcript = Array.from(event.results)
-        .map(r => r[0].transcript.toLowerCase())
-        .join("");
-      
+      const transcript = Array.from(event.results).map(r => r[0].transcript.toLowerCase()).join("");
       setLocalCaption(transcript);
       socket.emit("send-caption", { text: transcript, roomId });
-
       const keywords = ["hello", "thanks", "yes", "no", "please", "sorry"];
       const found = keywords.find(word => transcript.split(" ").includes(word));
-      
       if (found) {
         const gifUrl = `https://sign-bridge-backend.onrender.com/signs/${found}.gif`;
         socket.emit("send-speech-gif", { gifUrl, roomId });
       }
     };
-
     recognition.start();
     return () => recognition.stop();
   }, [roomId]);
 
-  // 4. Drawing Logic
+  // 4. Drawing Landmarks
   const drawLandmarks = useCallback((landmarks) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -154,53 +144,42 @@ const VideoCall = ({ roomId }) => {
     canvas.height = canvas.clientHeight;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     if (!landmarks) return;
-
     ctx.fillStyle = "#10b981";
     landmarks.forEach((point) => {
       const x = (1 - point.x) * canvas.width;
       const y = point.y * canvas.height;
-      ctx.beginPath();
-      ctx.arc(x, y, 4, 0, 2 * Math.PI);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI); ctx.fill();
     });
   }, []);
 
-  // 5. Render-Optimized Prediction Loop
+  // 5. Prediction Loop (Render Optimized)
   const sendFrameToBackend = useCallback(async () => {
     if (!localVideo.current || localVideo.current.readyState !== 4) return;
-    
     const captureCanvas = document.createElement("canvas");
-    captureCanvas.width = 320; 
-    captureCanvas.height = 240;
+    captureCanvas.width = 320; captureCanvas.height = 240;
     const ctx = captureCanvas.getContext("2d");
     ctx.drawImage(localVideo.current, 0, 0, 320, 240);
-    
     const image = captureCanvas.toDataURL("image/jpeg", 0.3);
 
     try {
+      // ✅ ABSOLUTE URL to fix 404
       const res = await fetch("https://sign-bridge-backend.onrender.com/predict", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ image }),
       });
-
-      if (!res.ok) throw new Error("Server sleeping");
-
+      if (!res.ok) throw new Error();
       const data = await res.json();
       setIsAiConnected(true);
       drawLandmarks(data.landmarks);
-
       if (data.sign && data.sign !== lastSignRef.current) {
         if (data.confidence > 60 || data.sign === "No Sign") {
-          setSign(data.sign);
-          setConfidence(data.confidence || 0);
+          setSign(data.sign); setConfidence(data.confidence || 0);
           lastSignRef.current = data.sign;
           socket.emit("send-sign", data.sign, roomId);
         }
       }
-    } catch {
-      setIsAiConnected(false);
-    }
+    } catch { setIsAiConnected(false); }
   }, [roomId, drawLandmarks]);
 
   useEffect(() => {
@@ -257,6 +236,7 @@ const VideoCall = ({ roomId }) => {
   );
 };
 
+// ... (Use the same styles object from previous turn)
 const styles = {
   container: { padding: "20px", background: "#0f172a", borderRadius: "20px", minHeight: "80vh" },
   videoGrid: { display: "flex", justifyContent: "center", gap: "25px", flexWrap: "wrap" },
