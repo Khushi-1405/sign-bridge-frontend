@@ -25,12 +25,9 @@ logger = logging.getLogger("SignBridgeAPI")
 # ✅ FIX 1: Corrected CORS (Must include https://)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://sign-bridge-frontend-six.vercel.app", 
-        "http://localhost:5173" # Allow local development too
-    ], 
+    allow_origins=["sign-bridge-frontend-k30j1x17y-khushi-dubeys-projects-f032c6aa.vercel.app"], # Your specific Vercel URL
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["*"],
     allow_headers=["*"],
 )
 
