@@ -6,7 +6,11 @@ import os
 from collections import deque
 
 # ✅ NEW: Explicitly import solutions to prevent AttributeError on Railway
-from mediapipe.python.solutions import hands as mp_hands
+try:
+    from mediapipe.solutions import hands as mp_hands
+except ImportError:
+    from mediapipe.python.solutions import hands as mp_hands
+
 
 # ✅ 1. Load Scikit-Learn Model Safely
 model_path = os.path.join(os.path.dirname(__file__), "model.pkl")
