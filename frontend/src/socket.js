@@ -4,7 +4,7 @@ import { io } from "socket.io-client";
 const SOCKET_URL = import.meta.env.VITE_API_URL || 
   (window.location.hostname === "localhost" 
     ? "http://localhost:5000" 
-    : "https://sign-bridge-frontend-am22.onrender.com"); 
+    : "sign-bridge-node-production.up.railway.app"); 
 
 const socket = io(SOCKET_URL, {
   // 🚀 Added "polling" as a fallback. Render free tier sometimes blocks 
