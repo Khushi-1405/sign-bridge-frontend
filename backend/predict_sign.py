@@ -5,75 +5,93 @@ import numpy as np
 import os
 from collections import deque
 
-# ✅ 1. Load model safely
+# ✅ 1. Load Scikit-Learn Model Safely
+# Since it's a .pkl, we only need scikit-learn (no TensorFlow required!)
 model_path = os.path.join(os.path.dirname(__file__), "model.pkl")
-try:
-    with open(model_path, "rb") as f:
-        model = pickle.load(f)
-except FileNotFoundError:
-    print("❌ Error: model.pkl not found in the backend directory!")
-    model = None
+model = None
 
-# ✅ 2. Initialize MediaPipe (Cleaned up redundancy)
+if os.path.exists(model_path):
+    try:
+        with open(model_path, "rb") as f:
+            model = pickle.load(f)
+        print("✅ Scikit-Learn Model loaded successfully")
+    except Exception as e:
+        print(f"❌ Error loading model: {e}")
+else:
+    print(f"⚠️ Warning: {model_path} not found!")
+
+# ✅ 2. Initialize MediaPipe (Optimized for Server)
+# We use the 'hands' solution specifically to save RAM
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
-    static_image_mode=False, # Optimized for video tracking
+    static_image_mode=False, 
     max_num_hands=1, 
-    min_detection_confidence=0.8, # Increased for better accuracy
-    min_tracking_confidence=0.8
+    min_detection_confidence=0.7, # Balanced for Render latency
+    min_tracking_confidence=0.7
 )
 
-# ✅ 3. BUFFER FOR SMOOTHING (Prevents flickering)
-# Stores the last 5 predictions to ensure stability
+# ✅ 3. Prediction Smoothing Buffer
+# This prevents the UI from flickering between signs
 prediction_buffer = deque(maxlen=5)
 
 def predict_sign(frame):
-    if frame is None or not isinstance(frame, np.ndarray):
+    """
+    Takes an OpenCV frame, processes landmarks, 
+    and returns (sign_name, confidence, landmarks).
+    """
+    if frame is None:
         return "No Sign", 0, []
     
     if model is None:
-        return "Model Error", 0, []
+        return "Model Offline", 0, []
 
     try:
-        # Convert BGR (OpenCV) to RGB (MediaPipe)
-        rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        result = hands.process(rgb)
+        # 🎨 Convert BGR to RGB for MediaPipe
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        result = hands.process(rgb_frame)
 
         if result.multi_hand_landmarks:
-            for handLms in result.multi_hand_landmarks:
-                x_vals = [lm.x for lm in handLms.landmark]
-                y_vals = [lm.y for lm in handLms.landmark]
+            for hand_landmarks in result.multi_hand_landmarks:
+                # Extract raw coordinates
+                x_vals = [lm.x for lm in hand_landmarks.landmark]
+                y_vals = [lm.y for lm in hand_landmarks.landmark]
 
-                # ✅ NORMALIZATION: Relative to Wrist (Landmark 0)
+                # 📏 NORMALIZATION (Relative to Wrist - Landmark 0)
                 base_x, base_y = x_vals[0], y_vals[0]
                 temp_data = []
                 for i in range(len(x_vals)):
                     temp_data.append(x_vals[i] - base_x)
                     temp_data.append(y_vals[i] - base_y)
 
-                # ✅ SCALING: Makes detection distance-independent
+                # 📉 SCALING (Distance Independence)
                 max_val = max(map(abs, temp_data))
-                data = [val / max_val for val in temp_data] if max_val != 0 else temp_data
+                if max_val == 0: max_val = 1
+                data = [val / max_val for val in temp_data]
 
-                # 🔥 PREDICTION
+                # 🔮 ML PREDICTION (Scikit-Learn)
                 raw_prediction = model.predict([data])[0]
-                probabilities = model.predict_proba([data])
-                confidence = np.max(probabilities) * 100
+                
+                # Get confidence score
+                try:
+                    probabilities = model.predict_proba([data])
+                    confidence = np.max(probabilities) * 100
+                except:
+                    confidence = 100 # Fallback if model doesn't support proba
 
-                # 🚀 SMOOTHING LOGIC
-                # Only return the sign if it appears consistently in the buffer
+                # 🌊 SMOOTHING
                 prediction_buffer.append(raw_prediction)
+                # Find the most frequent prediction in the last 5 frames
                 most_frequent_sign = max(set(prediction_buffer), key=list(prediction_buffer).count)
 
-                # 🚀 SERIALIZATION: For React Canvas Drawing
-                serialized_landmarks = [{'x': lm.x, 'y': lm.y} for lm in handLms.landmark]
+                # 📍 SERIALIZATION (Format landmarks for React Canvas)
+                serialized_landmarks = [{'x': lm.x, 'y': lm.y} for lm in hand_landmarks.landmark]
 
                 return str(most_frequent_sign), confidence, serialized_landmarks
 
-        # If no hand detected, clear the buffer gradually
+        # If no hand is detected, clear the buffer to reset state
         prediction_buffer.clear()
         return "No Sign", 0, []
 
     except Exception as e:
-        print(f"Prediction Error: {e}")
+        print(f"ML Processing Error: {e}")
         return "Error", 0, []
