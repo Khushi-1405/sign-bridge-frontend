@@ -1,16 +1,8 @@
-# 1. Force headless OpenCV first to prevent GUI dependency issues
 opencv-python-headless
-
-# 2. Base dependencies
+mediapipe
 fastapi
 uvicorn[standard]
-gunicorn
-
-# 3. Data and AI libraries (Listed after OpenCV)
 pandas
 numpy==1.26.4
 scikit-learn==1.3.2
-mediapipe
-
-# 4. Dummy comment to trigger a change detection
-# cache-breaker-v1
+gunicorn
