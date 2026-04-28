@@ -1,6 +1,6 @@
 [phases.setup]
-nixPkgs = ["python310", "libGL", "glib"]
+nixPkgs = ["python310", "gcc"]
 aptPkgs = ["libgl1", "libglib2.0-0", "libsm6", "libxext6", "libxrender1"]
 
-[phases.build]
-cmds = ["pip install --upgrade pip", "pip install -r requirements.txt"]
+[phases.install]
+cmds = ["python -m venv /opt/venv && /opt/venv/bin/pip install --upgrade pip && /opt/venv/bin/pip install -r requirements.txt"]
