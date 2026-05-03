@@ -7,7 +7,7 @@ const Controls = ({ roomId, setSign }) => {
   const [aiStatus, setAiStatus] = useState("OFFLINE"); // 🤖 Added to track AI Engine status
   const [loading, setLoading] = useState(false);
   const [autoDetect, setAutoDetect] = useState(false);
-  
+
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef(null);
@@ -38,7 +38,7 @@ const Controls = ({ roomId, setSign }) => {
   useEffect(() => {
     // Check AI Engine Health on load
     fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/")
-      .then(res => { if(res.ok) setAiStatus("ONLINE") })
+      .then(res => { if (res.ok) setAiStatus("ONLINE") })
       .catch(() => setAiStatus("OFFLINE"));
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -58,25 +58,25 @@ const Controls = ({ roomId, setSign }) => {
   }, [roomId]);
 
   const toggleListening = () => {
-    if (isListening) { recognitionRef.current.stop(); } 
+    if (isListening) { recognitionRef.current.stop(); }
     else { setIsListening(true); recognitionRef.current.start(); }
   };
 
   const captureFrame = () => {
-  const canvas = canvasRef.current;
-  const video = videoRef.current;
-  if (!canvas || !video) return null;
+    const canvas = canvasRef.current;
+    const video = videoRef.current;
+    if (!canvas || !video) return null;
 
-  // Reduce size to improve speed!
-  canvas.width = 224; 
-  canvas.height = 224;
+    // Reduce size to improve speed!
+    canvas.width = 224;
+    canvas.height = 224;
 
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0, 224, 224);
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0, 224, 224);
 
-  // Lower quality = faster transmission
-  return canvas.toDataURL("image/jpeg", 0.5); 
-};
+    // Lower quality = faster transmission
+    return canvas.toDataURL("image/jpeg", 0.5);
+  };
 
   // 🤖 STEP 4: AI Inference
   const detectSign = useCallback(async () => {
@@ -85,10 +85,12 @@ const Controls = ({ roomId, setSign }) => {
       if (!image) return;
       setLoading(true);
 
-      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/", {
+      // Ensure it starts with https:// and ends with /predict
+      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/predict", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          // Use backticks for the line below to ensure the token works
           "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
         body: JSON.stringify({ image }),
