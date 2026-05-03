@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from "react";
 import socket from "../socket";
 
 // 🌍 CONFIGURATION
-const AI_BACKEND_URL = "https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/predict";
+const AI_BACKEND_URL = "https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev";
 
 const VideoCall = ({ roomId }) => {
   const localVideo = useRef(null);
