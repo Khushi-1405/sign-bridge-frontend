@@ -63,14 +63,20 @@ const Controls = ({ roomId, setSign }) => {
   };
 
   const captureFrame = () => {
-    const canvas = canvasRef.current;
-    const video = videoRef.current;
-    if (!canvas || !video) return null;
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    canvas.getContext("2d").drawImage(video, 0, 0);
-    return canvas.toDataURL("image/jpeg");
-  };
+  const canvas = canvasRef.current;
+  const video = videoRef.current;
+  if (!canvas || !video) return null;
+
+  // Reduce size to improve speed!
+  canvas.width = 224; 
+  canvas.height = 224;
+
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, 224, 224);
+
+  // Lower quality = faster transmission
+  return canvas.toDataURL("image/jpeg", 0.5); 
+};
 
   // 🤖 STEP 4: AI Inference
   const detectSign = useCallback(async () => {
