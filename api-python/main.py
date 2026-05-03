@@ -36,7 +36,7 @@ def load_model():
 # ✅ FIX: Updated CORS for Production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://sign-bridge-frontend-six.vercel.app/"], # For production, replace with your specific Vercel URL
+    allow_origins=["*"], # For production, replace with your specific Vercel URL
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
