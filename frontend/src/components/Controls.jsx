@@ -79,7 +79,7 @@ const Controls = ({ roomId, setSign }) => {
 
       setLoading(true);
       // Note: In production, change 'localhost' to your Vercel/Python backend URL
-      const res = await fetch("http://localhost:8000/predict", {
+      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
