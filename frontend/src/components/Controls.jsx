@@ -3,10 +3,11 @@ import socket from "../socket";
 
 const Controls = ({ roomId, setSign }) => {
   const [sign, setLocalSign] = useState("");
+  const [remoteSign, setRemoteSign] = useState(""); // 📡 Added for the other user's signs
+  const [aiStatus, setAiStatus] = useState("OFFLINE"); // 🤖 Added to track AI Engine status
   const [loading, setLoading] = useState(false);
   const [autoDetect, setAutoDetect] = useState(false);
   
-  // 🎙️ Speech State
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState("");
   const recognitionRef = useRef(null);
@@ -19,17 +20,27 @@ const Controls = ({ roomId, setSign }) => {
     navigator.mediaDevices
       .getUserMedia({ video: true })
       .then((stream) => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
+        if (videoRef.current) videoRef.current.srcObject = stream;
       })
-      .catch((err) => {
-        console.error("Camera error:", err);
-      });
+      .catch((err) => console.error("Camera error:", err));
   }, []);
 
-  // 🎙️ STEP 2: Initialize Web Speech API
+  // 📡 STEP 2: Socket Listeners (The missing "Remote" bridge)
   useEffect(() => {
+    socket.on("receive-sign", (incomingSign) => {
+      setRemoteSign(incomingSign); // Updates the "Remote" box for you
+    });
+
+    return () => socket.off("receive-sign");
+  }, []);
+
+  // 🎙️ STEP 3: Speech API & Status Check
+  useEffect(() => {
+    // Check AI Engine Health on load
+    fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/")
+      .then(res => { if(res.ok) setAiStatus("ONLINE") })
+      .catch(() => setAiStatus("OFFLINE"));
+
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     if (SpeechRecognition) {
       recognitionRef.current = new SpeechRecognition();
@@ -38,157 +49,103 @@ const Controls = ({ roomId, setSign }) => {
       recognitionRef.current.lang = "en-US";
 
       recognitionRef.current.onresult = (event) => {
-        const current = event.resultIndex;
-        const text = event.results[current][0].transcript;
+        const text = event.results[event.resultIndex][0].transcript;
         setTranscript(text);
-        
-        // 📡 Emit voice text to the room so the other user sees it
         socket.emit("send-sign", `[Voice]: ${text}`, roomId);
       };
-
       recognitionRef.current.onend = () => setIsListening(false);
     }
   }, [roomId]);
 
   const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current.stop();
-    } else {
-      setIsListening(true);
-      recognitionRef.current.start();
-    }
+    if (isListening) { recognitionRef.current.stop(); } 
+    else { setIsListening(true); recognitionRef.current.start(); }
   };
 
-  // 📸 STEP 3: Capture Frame
   const captureFrame = () => {
     const canvas = canvasRef.current;
     const video = videoRef.current;
     if (!canvas || !video) return null;
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
-    const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0);
+    canvas.getContext("2d").drawImage(video, 0, 0);
     return canvas.toDataURL("image/jpeg");
   };
 
-  // 🤖 STEP 4: Send to FastAPI (Sign Language Detection)
+  // 🤖 STEP 4: AI Inference
   const detectSign = useCallback(async () => {
     try {
       const image = captureFrame();
       if (!image) return;
-
       setLoading(true);
-      // Note: In production, change 'localhost' to your Vercel/Python backend URL
-      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/", {
+
+      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/predict", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${localStorage.getItem("token")}` // Including your Auth token
+          "Authorization": `Bearer ${localStorage.getItem("token")}`
         },
         body: JSON.stringify({ image }),
       });
 
       const data = await res.json();
-
       if (data.sign) {
         setLocalSign(data.sign);
         setSign(data.sign);
-        socket.emit("send-sign", data.sign, roomId);
+        socket.emit("send-sign", data.sign, roomId); // Send to remote user
+        setAiStatus("ONLINE");
       }
     } catch (err) {
       console.error("Prediction error:", err);
+      setAiStatus("OFFLINE");
     } finally {
       setLoading(false);
     }
   }, [roomId, setSign]);
 
-  // 🔁 STEP 5: Auto Detection Loop
   useEffect(() => {
     if (!autoDetect) return;
-    const interval = setInterval(() => {
-      detectSign();
-    }, 1000);
+    const interval = setInterval(detectSign, 1000);
     return () => clearInterval(interval);
   }, [autoDetect, detectSign]);
 
   return (
-    <div style={{ textAlign: "center", padding: "20px", background: "#f8fafc", borderRadius: "15px" }}>
-      <h3 style={{ color: "#4f46e5" }}>🤟 Sign Bridge AI</h3>
+    <div style={{ textAlign: "center", padding: "20px", background: "#0f172a", color: "white", borderRadius: "15px" }}>
+      {/* AI Status Indicator */}
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "10px" }}>
+        <span style={{ fontSize: "12px", color: aiStatus === "ONLINE" ? "#22c55e" : "#ef4444" }}>
+          ● AI ENGINE {aiStatus}
+        </span>
+      </div>
 
       <div style={{ position: "relative", display: "inline-block", marginBottom: "15px" }}>
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          width="320"
-          style={{ borderRadius: "12px", border: "4px solid #6366f1", boxShadow: "0 4px 6px rgba(0,0,0,0.1)" }}
-        />
-
-        <div style={{
-            position: "absolute",
-            bottom: "15px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            background: "rgba(0,0,0,0.7)",
-            color: "#fff",
-            padding: "8px 16px",
-            borderRadius: "20px",
-            fontSize: "14px",
-            whiteSpace: "nowrap"
-          }}>
-          {loading ? "⏳ Analyzing..." : sign || "🤟 Show a sign"}
+        <video ref={videoRef} autoPlay playsInline width="320" style={{ borderRadius: "12px", border: "2px solid #6366f1" }} />
+        <div style={{ position: "absolute", bottom: "10px", left: "50%", transform: "translateX(-50%)", background: "rgba(0,0,0,0.7)", padding: "5px 15px", borderRadius: "20px" }}>
+          {loading ? "⌛..." : sign || "🤟 Show Sign"}
         </div>
         <canvas ref={canvasRef} style={{ display: "none" }} />
       </div>
 
-      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "15px" }}>
-        {/* Detection Controls */}
-        <button 
-          onClick={detectSign} 
-          disabled={loading}
-          style={{ padding: "10px 20px", borderRadius: "8px", cursor: "pointer", border: "none", background: "#6366f1", color: "white" }}
-        >
-          Detect Sign
+      <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px" }}>
+        <button onClick={detectSign} style={{ background: "#6366f1", color: "white", padding: "8px 15px", borderRadius: "8px" }}>Detect</button>
+        <button onClick={() => setAutoDetect(!autoDetect)} style={{ background: autoDetect ? "#22c55e" : "#334155", color: "white", padding: "8px 15px", borderRadius: "8px" }}>
+          {autoDetect ? "Auto ON" : "Auto OFF"}
         </button>
-
-        <button
-          onClick={() => setAutoDetect(!autoDetect)}
-          style={{
-            padding: "10px 20px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            border: "none",
-            background: autoDetect ? "#22c55e" : "#cbd5e1",
-            color: autoDetect ? "white" : "black",
-          }}
-        >
-          {autoDetect ? "Auto ON 🔁" : "Auto OFF"}
-        </button>
-
-        {/* 🎙️ Voice Control */}
-        <button
-          onClick={toggleListening}
-          style={{
-            padding: "10px 20px",
-            borderRadius: "8px",
-            cursor: "pointer",
-            border: "none",
-            background: isListening ? "#ef4444" : "#ec4899",
-            color: "white",
-          }}
-        >
-          {isListening ? "Stop Voice 🎙️" : "Start Voice 🎤"}
+        <button onClick={toggleListening} style={{ background: isListening ? "#ef4444" : "#ec4899", color: "white", padding: "8px 15px", borderRadius: "8px" }}>
+          {isListening ? "Stop Voice" : "Start Voice"}
         </button>
       </div>
 
-      {/* Output Display */}
-      <div style={{ background: "white", padding: "15px", borderRadius: "10px", boxShadow: "inset 0 2px 4px rgba(0,0,0,0.05)" }}>
-        <p style={{ margin: "5px 0", color: "#64748b" }}>
-          <strong>Voice Transcript:</strong> {transcript || "No speech detected"}
-        </p>
-        <p style={{ margin: "5px 0", fontSize: "20px", color: "#4f46e5", fontWeight: "bold" }}>
-          ✨ Detected Sign: {sign || "Waiting..." }
-        </p>
+      {/* Two-Way Translation Display */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+        <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px" }}>
+          <p style={{ fontSize: "12px", color: "#94a3b8" }}>REMOTE SIGN</p>
+          <p style={{ fontWeight: "bold" }}>{remoteSign || "Waiting..."}</p>
+        </div>
+        <div style={{ background: "#1e293b", padding: "10px", borderRadius: "8px" }}>
+          <p style={{ fontSize: "12px", color: "#94a3b8" }}>VOICE TRANSCRIPT</p>
+          <p style={{ fontWeight: "bold" }}>{transcript || "..."}</p>
+        </div>
       </div>
     </div>
   );
