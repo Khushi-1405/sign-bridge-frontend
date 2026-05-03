@@ -85,7 +85,7 @@ const Controls = ({ roomId, setSign }) => {
       if (!image) return;
       setLoading(true);
 
-      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/predict", {
+      const res = await fetch("https://glowing-capybara-x55x597jjx6gfvv7g-8000.app.github.dev/", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
