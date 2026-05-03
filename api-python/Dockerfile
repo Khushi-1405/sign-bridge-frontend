@@ -1,13 +1,12 @@
-# Use a slim Python image to keep the size down
-FROM python:3.10-slim
+# Use Bullseye (Debian 11) for better stability with OpenCV/MediaPipe
+FROM python:3.10-slim-bullseye
 
-# Set the working directory inside the container
+# Set the working directory
 WORKDIR /app
 
-# Install system dependencies for OpenCV and MediaPipe
-# These are required because 'slim' images lack GUI/image processing libraries
+# Install the correct updated system dependencies
 RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
+    libgl1 \
     libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,4 +26,4 @@ EXPOSE 8000
 
 # Command to run the application
 # We use 1 worker to save memory/CPU on free-tier hosting
-CMD ["uvicorn", "main.py:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
